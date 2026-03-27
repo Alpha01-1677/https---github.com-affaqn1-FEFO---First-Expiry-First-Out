@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestlé SSAMS — FEFO Dispatch · PB4</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        .dispatch-approved { background:#f0fdf4; border:1px solid #86efac; }
+        .dispatch-rejected { background:#fff1f2; border:1px solid #fca5a5; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="app-shell" class="flex h-screen overflow-hidden">
+        <div id="sidebar-slot"></div>
+
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div id="header-slot"></div>
+
+            <main class="flex-1 overflow-y-auto p-6 space-y-6">
+
+                <!-- PB4 badge -->
+                <div class="flex items-center gap-3">
+                    <span class="text-[11px] font-bold px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-100 mono">PB4 · FEFO Dispatch — Core Feature</span>
+                    <span class="text-xs text-slate-400">Validates FEFO + MRSL rules · blocks non-compliant batches</span>
+                </div>
+
+                <!-- ── Dispatch form + result ── -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    <!-- Form -->
+                    <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                        <h3 class="font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                            New Dispatch Order
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Firestore Write</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-5">The system will automatically select batches using FEFO and validate MRSL compliance.</p>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="form-label">Retailer / Destination <span class="text-red-400">*</span></label>
+                                <input id="dispatch-retailer" type="text" class="form-input" placeholder="e.g. Metro Supermarkets — Colombo" />
+                            </div>
+                            <div>
+                                <label class="form-label">Product Name <span class="text-red-400">*</span></label>
+                                <input id="dispatch-product" type="text" class="form-input" placeholder="e.g. Nescafé Gold 200g" />
+                                <p class="text-[10px] text-slate-400 mt-1">Partial match supported (e.g. "Nescafé")</p>
+                            </div>
+                            <div>
+                                <label class="form-label">Quantity Required (units) <span class="text-red-400">*</span></label>
+                                <input id="dispatch-qty" type="number" class="form-input" placeholder="200" min="1" />
+                            </div>
+                            <div>
+                                <label class="form-label">MRSL Threshold (days)</label>
+                                <input id="dispatch-mrsl-days" type="number" class="form-input" value="30" min="1" />
+                                <p class="text-xs text-slate-400 mt-1.5">Min days before expiry (also enforces 20% shelf life rule)</p>
+                            </div>
+                            <button onclick="processDispatch()" id="dispatch-btn"
+                                    class="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all"
+                                    style="background:linear-gradient(135deg,var(--nestle-blue),var(--nestle-light-blue));">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span id="dispatch-btn-text">Process FEFO Dispatch</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Result panel -->
+                    <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                        <h3 class="font-semibold text-slate-900 mb-1">Dispatch Validation Result</h3>
+                        <p class="text-xs text-slate-400 mb-4">Results of FEFO batch selection + MRSL compliance check</p>
+                        <div id="dispatch-result-area">
+                            <div class="flex flex-col items-center justify-center h-48 text-slate-300">
+                                <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                                <p class="text-sm">No dispatch processed yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── FEFO + MRSL explainer ── -->
+                <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 class="font-semibold text-slate-900 mb-3">FEFO + MRSL Rules</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div class="bg-blue-50 rounded-xl p-4">
+                            <div class="font-semibold text-blue-800 mb-1">📦 FEFO Rule</div>
+                            <p class="text-blue-700 text-xs leading-relaxed">First Expiring, First Out — batches with the earliest expiry dates are selected first for dispatch, minimizing waste.</p>
+                        </div>
+                        <div class="bg-amber-50 rounded-xl p-4">
+                            <div class="font-semibold text-amber-800 mb-1">⏱ MRSL Rule</div>
+                            <p class="text-amber-700 text-xs leading-relaxed">Minimum Remaining Shelf Life — a batch must have ≥ 20% shelf life AND ≥ 30 days (configurable) to expiry to be approved for dispatch.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Dispatch Orders history ── -->
+                <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold text-slate-900 text-sm">All Dispatch Orders</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Historical record of FEFO dispatch validations · real-time Firestore</p>
+                        </div>
+                        <div class="text-xs font-semibold text-slate-400 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200" id="orders-count">Loading…</div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Retailer</th>
+                                    <th>Product</th>
+                                    <th>Qty Req.</th>
+                                    <th>Fulfilled</th>
+                                    <th>Batches Used</th>
+                                    <th>Status</th>
+                                    <th>Processed At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-tbody">
+                                <tr>
+                                    <td colspan="8" class="text-center text-slate-400 py-8 text-sm">Loading orders…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ── Firestore schema note ── -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Firestore Schema · dispatch_orders/{auto-id}</div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
+                        <div class="bg-white rounded-lg px-3 py-2 border border-slate-200"><span class="text-slate-400 block font-semibold uppercase">status</span><span class="font-mono text-purple-700">APPROVED | PARTIAL | REJECTED</span></div>
+                        <div class="bg-white rounded-lg px-3 py-2 border border-slate-200"><span class="text-slate-400 block font-semibold uppercase">batchesUsed</span><span class="font-mono text-purple-700">array of batch refs</span></div>
+                        <div class="bg-white rounded-lg px-3 py-2 border border-slate-200"><span class="text-slate-400 block font-semibold uppercase">rejectedBatches</span><span class="font-mono text-purple-700">array + reason</span></div>
+                        <div class="bg-white rounded-lg px-3 py-2 border border-slate-200"><span class="text-slate-400 block font-semibold uppercase">mrslThresholdDays</span><span class="font-mono text-purple-700">number</span></div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <!-- ══════════════════════════════════════════
+         FIREBASE — PB4: Ensure Dispatch Decisions (Core Feature)
+         Acceptance criteria:
+           ✅ System selects batch using FEFO rule
+           ✅ Products violating MRSL are blocked
+           ✅ Valid batches → APPROVED
+           ✅ Invalid batches → REJECTED
+    ══════════════════════════════════════════ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, addDoc, query, orderBy, onSnapshot, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { buildSidebar, buildHeader, toast, fmtDate, shelfLifePct, mrslStatus, badgeHtml, shelfBar, setLoading, startClock } from './sidebar.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        };
+        const app  = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db   = getFirestore(app);
+
+        let currentUser = null;
+        let allBatches  = [];
+
+        // ── Auth guard ──
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'login.html'; return; }
+            currentUser = user;
+
+            if (!sessionStorage.getItem('user_uid')) {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                const data = snap.exists() ? snap.data() : {};
+                sessionStorage.setItem('user_uid',  user.uid);
+                sessionStorage.setItem('user_name', data.displayName || user.email.split('@')[0]);
+                sessionStorage.setItem('user_role', data.role || 'Warehouse Staff');
+            }
+
+            document.getElementById('sidebar-slot').innerHTML = buildSidebar('dispatch');
+            document.getElementById('header-slot').innerHTML  = buildHeader('FEFO Dispatch', 'Process dispatch orders with FEFO + MRSL validation · PB4');
+            startClock();
+
+            // Real-time batch listener
+            const bq = query(collection(db, 'batches'), orderBy('expiryDate', 'asc'));
+            onSnapshot(bq, (snap) => {
+                allBatches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            });
+
+            loadOrders();
+        });
+
+        window.doLogout = async () => {
+            await signOut(auth);
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        };
+
+        // ════════════════════════════════════════
+        // PB4: Process FEFO Dispatch
+        // ════════════════════════════════════════
+        window.processDispatch = async function() {
+            const retailer  = document.getElementById('dispatch-retailer').value.trim();
+            const product   = document.getElementById('dispatch-product').value.trim();
+            const qtyNeeded = parseInt(document.getElementById('dispatch-qty').value);
+            const mrslDays  = parseInt(document.getElementById('dispatch-mrsl-days').value) || 30;
+
+            if (!retailer || !product || !qtyNeeded || qtyNeeded < 1) {
+                toast('Please fill all dispatch fields correctly.', 'error');
+                return;
+            }
+
+            setLoading('dispatch-btn', true);
+            document.getElementById('dispatch-btn-text').textContent = 'Processing…';
+
+            // PB4: Filter by product, sort by expiryDate ASC (FEFO)
+            const productBatches = allBatches
+                .filter(b => b.productName.toLowerCase().includes(product.toLowerCase()))
+                .sort((a, b) => {
+                    const da = a.expiryDate.toDate ? a.expiryDate.toDate() : new Date(a.expiryDate);
+                    const db2 = b.expiryDate.toDate ? b.expiryDate.toDate() : new Date(b.expiryDate);
+                    return da - db2;  // earliest expiry first = FEFO
+                });
+
+            const resultArea = document.getElementById('dispatch-result-area');
+
+            if (!productBatches.length) {
+                resultArea.innerHTML = `
+                    <div class="p-4 dispatch-rejected rounded-xl">
+                        <div class="flex items-center gap-2 text-red-700 font-semibold mb-2">❌ No Batches Found</div>
+                        <p class="text-red-600 text-sm">No batches found matching "${product}".</p>
+                    </div>`;
+                setLoading('dispatch-btn', false);
+                document.getElementById('dispatch-btn-text').textContent = 'Process FEFO Dispatch';
+                return;
+            }
+
+            let remaining = qtyNeeded;
+            const approved = [], rejected = [];
+
+            // PB4: Evaluate each batch in FEFO order against MRSL rules
+            for (const batch of productBatches) {
+                if (remaining <= 0) break;
+                const ms  = mrslStatus(batch, mrslDays);
+                const pct = shelfLifePct(batch.manufacturingDate, batch.expiryDate);
+
+                if (!ms.ok) {
+                    // PB4 Acceptance: products violating MRSL are BLOCKED
+                    rejected.push({
+                        batch,
+                        reason: ms.daysLeft < 0
+                            ? 'Expired'
+                            : `MRSL Fail (${pct}% shelf life, ${ms.daysLeft}d left)`
+                    });
+                    continue;
+                }
+                // PB4 Acceptance: valid batches → APPROVED
+                const take = Math.min(batch.quantity, remaining);
+                approved.push({ batch, take, pct, daysLeft: ms.daysLeft });
+                remaining -= take;
+            }
+
+            const fulfilled = qtyNeeded - remaining;
+            const status    = remaining <= 0 ? 'APPROVED' : (fulfilled > 0 ? 'PARTIAL' : 'REJECTED');
+
+            // Save dispatch order to Firestore
+            try {
+                await addDoc(collection(db, 'dispatch_orders'), {
+                    retailer,
+                    productName:       product,
+                    quantityRequired:  qtyNeeded,
+                    quantityFulfilled: fulfilled,
+                    mrslThresholdDays: mrslDays,
+                    status,
+                    batchesUsed: approved.map(a => ({
+                        batchNumber:   a.batch.batchNumber,
+                        quantity:      a.take,
+                        expiryDate:    a.batch.expiryDate,
+                        shelfLifePct:  a.pct
+                    })),
+                    rejectedBatches: rejected.map(r => ({
+                        batchNumber: r.batch.batchNumber,
+                        reason:      r.reason
+                    })),
+                    processedAt: serverTimestamp(),
+                    processedBy: currentUser?.uid || 'demo'
+                });
+            } catch (e) {
+                toast('Could not save dispatch order: ' + e.message, 'error');
+            }
+
+            // ── Render result ──
+            const statusColors = { APPROVED: 'green', PARTIAL: 'yellow', REJECTED: 'red' };
+            const statusIcons  = { APPROVED: '✅',    PARTIAL: '⚠️',     REJECTED: '❌' };
+
+            let html = `
+                <div class="mb-4 flex items-center justify-between">
+                    ${badgeHtml(`${statusIcons[status]} ${status}`, statusColors[status])}
+                    <span class="text-xs text-slate-400 mono">${new Date().toLocaleTimeString()}</span>
+                </div>
+                <div class="text-sm text-slate-600 mb-4">
+                    Fulfilling <strong>${qtyNeeded.toLocaleString()} units</strong> of
+                    <strong>${product}</strong> for <strong>${retailer}</strong>
+                </div>`;
+
+            if (approved.length) {
+                html += `
+                <div class="dispatch-approved rounded-xl p-4 mb-3">
+                    <div class="text-green-700 font-semibold text-sm mb-2">✅ Approved Batches (FEFO Order)</div>
+                    ${approved.map(a => `
+                        <div class="flex items-center justify-between text-xs py-1.5 border-b border-green-200 last:border-0">
+                            <span class="mono font-medium text-green-800">${a.batch.batchNumber}</span>
+                            <span class="text-green-700">${a.take} units · ${a.daysLeft}d left · ${a.pct}% shelf life</span>
+                        </div>`).join('')}
+                    <div class="mt-2 text-xs text-green-600 font-semibold">
+                        Total dispatched: ${fulfilled.toLocaleString()} / ${qtyNeeded.toLocaleString()} units
+                    </div>
+                </div>`;
+            }
+
+            if (rejected.length) {
+                html += `
+                <div class="dispatch-rejected rounded-xl p-4">
+                    <div class="text-red-700 font-semibold text-sm mb-2">❌ Rejected Batches (MRSL Violation)</div>
+                    ${rejected.map(r => `
+                        <div class="flex items-center justify-between text-xs py-1.5 border-b border-red-200 last:border-0">
+                            <span class="mono font-medium text-red-800">${r.batch.batchNumber}</span>
+                            <span class="text-red-600">${r.reason}</span>
+                        </div>`).join('')}
+                </div>`;
+            }
+
+            if (remaining > 0) {
+                html += `
+                <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 font-medium">
+                    ⚠️ Shortfall: ${remaining.toLocaleString()} units could not be fulfilled due to insufficient compliant stock.
+                </div>`;
+            }
+
+            resultArea.innerHTML = html;
+            toast(
+                `Dispatch ${status.toLowerCase()}: ${fulfilled}/${qtyNeeded} units fulfilled.`,
+                status === 'APPROVED' ? 'success' : status === 'PARTIAL' ? 'info' : 'error'
+            );
+            setLoading('dispatch-btn', false);
+            document.getElementById('dispatch-btn-text').textContent = 'Process FEFO Dispatch';
+            loadOrders(); // refresh table
+        };
+
+        // ── Load orders history ──
+        function loadOrders() {
+            const tbody = document.getElementById('orders-tbody');
+            const q = query(collection(db, 'dispatch_orders'), orderBy('processedAt', 'desc'));
+            onSnapshot(q, (snap) => {
+                document.getElementById('orders-count').textContent =
+                    `${snap.size} order${snap.size !== 1 ? 's' : ''}`;
+
+                if (snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-slate-400 py-8 text-sm">No dispatch orders yet.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = snap.docs.map(d => {
+                    const o = d.data();
+                    const statusColors = { APPROVED:'green', PARTIAL:'yellow', REJECTED:'red' };
+                    const batches = (o.batchesUsed || []).map(b => b.batchNumber).join(', ') || '—';
+                    const ts = o.processedAt ? fmtDate(o.processedAt) : '—';
+                    return `<tr>
+                        <td><span class="mono text-xs text-slate-500">${d.id.slice(0,8)}…</span></td>
+                        <td class="text-sm">${o.retailer}</td>
+                        <td class="text-sm">${o.productName}</td>
+                        <td class="mono text-xs">${(o.quantityRequired||0).toLocaleString()}</td>
+                        <td class="mono text-xs">${(o.quantityFulfilled||0).toLocaleString()}</td>
+                        <td class="mono text-xs text-slate-500" title="${batches}">
+                            ${batches.length > 35 ? batches.slice(0,35)+'…' : batches}
+                        </td>
+                        <td>${badgeHtml(o.status, statusColors[o.status] || 'gray')}</td>
+                        <td class="text-xs text-slate-400">${ts}</td>
+                    </tr>`;
+                }).join('');
+            }, (err) => {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-400 py-8 text-sm">Error: ${err.message}</td></tr>`;
+            });
+        }
+    </script>
+</body>
+</html>
