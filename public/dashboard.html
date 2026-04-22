@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestlé SSAMS — Dashboard</title>
+    <meta name="description"
+        content="Nestlé SSAMS warehouse dispatch compliance dashboard — live batch overview, MRSL metrics and FEFO dispatch management." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ── Dashboard-specific styles ── */
+        body {
+            background: #f0f4f8;
+        }
+
+        /* Mesh gradient hero */
+        .hero-banner {
+            position: relative;
+            background: linear-gradient(135deg, #001a4d 0%, #003087 40%, #0057B8 70%, #00AEEF 100%);
+            border-radius: 24px;
+            overflow: hidden;
+            padding: 32px 36px;
+            color: #fff;
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            left: -10%;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, rgba(0, 174, 239, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            right: 5%;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-mesh-orb {
+            position: absolute;
+            top: -20%;
+            right: 12%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(0, 174, 239, 0.22) 0%, transparent 60%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Bento stat card glass */
+        .bento-card {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(0, 48, 135, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bento-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.55) 0%, transparent 55%);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .bento-card:hover {
+            transform: translateY(-4px) scale(1.015);
+            box-shadow: 0 20px 48px rgba(0, 48, 135, 0.13), 0 4px 12px rgba(0, 48, 135, 0.06);
+            border-color: rgba(0, 174, 239, 0.28);
+        }
+
+        /* Icon containers */
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Quick action card */
+        .action-card {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 20px;
+            padding: 22px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+            box-shadow: 0 4px 24px rgba(0, 48, 135, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.5) 0%, transparent 55%);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 48px rgba(0, 48, 135, 0.13), 0 4px 12px rgba(0, 48, 135, 0.06);
+            border-color: rgba(0, 174, 239, 0.35);
+        }
+
+        .action-card:hover .action-icon {
+            transform: scale(1.08);
+        }
+
+        .action-icon {
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Batch table container */
+        .table-glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 48, 135, 0.07);
+        }
+
+        /* DM Mono for batch numbers / quantities */
+        .batch-num {
+            font-family: 'DM Mono', monospace;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1e40af;
+            background: rgba(219, 234, 254, 0.7);
+            border: 1px solid rgba(147, 197, 253, 0.5);
+            padding: 3px 9px;
+            border-radius: 7px;
+            letter-spacing: 0.02em;
+        }
+
+        .qty-mono {
+            font-family: 'DM Mono', monospace;
+            font-weight: 500;
+            font-size: 14px;
+            color: #1e293b;
+            letter-spacing: -0.01em;
+        }
+
+        /* Sprint badge */
+        .sprint-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Stat number typography */
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            margin: 12px 0 6px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .stat-sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Section label */
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #94a3b8;
+            margin-bottom: 14px;
+        }
+
+        /* Shimmer animation for loading */
+        @keyframes shimmer {
+            0% {
+                background-position: -600px 0;
+            }
+
+            100% {
+                background-position: 600px 0;
+            }
+        }
+
+        .stat-shimmer {
+            display: inline-block;
+            width: 56px;
+            height: 36px;
+            background: linear-gradient(90deg, #e2e8f0 25%, #eef2f7 50%, #e2e8f0 75%);
+            background-size: 600px 100%;
+            animation: shimmer 1.4s infinite linear;
+            border-radius: 8px;
+            vertical-align: middle;
+        }
+
+        /* ── PB6: Aging Bucket Cards ── */
+        .bucket-card {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 20px;
+            padding: 22px 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bucket-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .bucket-card:hover {
+            transform: translateY(-4px) scale(1.015);
+        }
+
+        /* Critical 0-30d */
+        .bucket-critical {
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            box-shadow: 0 4px 24px rgba(239, 68, 68, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .bucket-critical::before {
+            background: linear-gradient(145deg, rgba(254, 226, 226, 0.5) 0%, transparent 55%);
+        }
+
+        .bucket-critical:hover {
+            box-shadow: 0 20px 48px rgba(239, 68, 68, 0.15), 0 4px 12px rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .bucket-critical .bucket-icon {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(185, 28, 28, 0.1));
+        }
+
+        .bucket-critical .bucket-count {
+            color: #dc2626;
+        }
+
+        .bucket-critical .bucket-ring {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+            animation: criticalPulse 2s infinite;
+        }
+
+        @keyframes criticalPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+            }
+
+            70% {
+                box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        /* Warning 31-60d */
+        .bucket-warning {
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            box-shadow: 0 4px 24px rgba(245, 158, 11, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .bucket-warning::before {
+            background: linear-gradient(145deg, rgba(254, 243, 199, 0.5) 0%, transparent 55%);
+        }
+
+        .bucket-warning:hover {
+            box-shadow: 0 20px 48px rgba(245, 158, 11, 0.15), 0 4px 12px rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .bucket-warning .bucket-icon {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1));
+        }
+
+        .bucket-warning .bucket-count {
+            color: #d97706;
+        }
+
+        /* Stable 60+d */
+        .bucket-stable {
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            box-shadow: 0 4px 24px rgba(34, 197, 94, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .bucket-stable::before {
+            background: linear-gradient(145deg, rgba(220, 252, 231, 0.5) 0%, transparent 55%);
+        }
+
+        .bucket-stable:hover {
+            box-shadow: 0 20px 48px rgba(34, 197, 94, 0.15), 0 4px 12px rgba(34, 197, 94, 0.08);
+            border-color: rgba(34, 197, 94, 0.4);
+        }
+
+        .bucket-stable .bucket-icon {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1));
+        }
+
+        .bucket-stable .bucket-count {
+            color: #16a34a;
+        }
+
+        /* Shared bucket helpers */
+        .bucket-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .bucket-count {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            margin: 10px 0 4px;
+        }
+
+        .bucket-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .bucket-meta {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+            font-family: 'DM Mono', monospace;
+        }
+
+        .bucket-range-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(0, 0, 0, 0.04);
+            color: #64748b;
+        }
+
+        /* ── PB7: Actioned Status Styles ── */
+        .actioned-row {
+            opacity: 0.5;
+            background: repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(226, 232, 240, 0.25) 10px, rgba(226, 232, 240, 0.25) 20px);
+        }
+
+        .actioned-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            background: rgba(100, 116, 139, 0.1);
+            color: #64748b;
+            border: 1px solid rgba(100, 116, 139, 0.15);
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.02em;
+        }
+
+        .btn-action-mark {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: #fff;
+            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.25);
+        }
+
+        .btn-action-mark:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+        }
+
+        .btn-action-done {
+            background: rgba(100, 116, 139, 0.1);
+            color: #94a3b8;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        /* Alert Planner button */
+        .btn-alert-planner {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: #fff;
+            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.25);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.02em;
+        }
+
+        .btn-alert-planner:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+        }
+
+        .btn-alert-planner:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-ej-setup {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 10.5px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            background: rgba(100, 116, 139, 0.06);
+            color: #64748b;
+            transition: all 0.2s ease;
+        }
+
+        .btn-ej-setup:hover {
+            background: rgba(100, 116, 139, 0.12);
+            color: #475569;
+        }
+
+        /* EmailJS setup modal */
+        .ej-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 9000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .ej-modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .ej-modal {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+            padding: 32px;
+            width: 100%;
+            max-width: 480px;
+            transform: translateY(12px) scale(0.97);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .ej-modal-overlay.open .ej-modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .ej-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 14px;
+        }
+
+        .ej-field label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .ej-field input {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-family: 'DM Mono', monospace;
+            color: #0f172a;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .ej-field input:focus {
+            border-color: #0057B8;
+        }
+
+        /* Critical detail panel */
+        .critical-detail-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(239, 68, 68, 0.06);
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, margin-top 0.4s ease;
+            margin-top: 0;
+        }
+
+        .critical-detail-panel.expanded {
+            max-height: 800px;
+            opacity: 1;
+            margin-top: 16px;
+        }
+
+        .critical-toggle-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #dc2626;
+            cursor: pointer;
+            margin-top: 10px;
+            padding: 4px 0;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+
+        .critical-toggle-link:hover {
+            color: #b91c1c;
+        }
+
+        .critical-toggle-link svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.3s ease;
+        }
+
+        .critical-toggle-link.open svg {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ══════════════════════════════════════════
+         APP SHELL — sidebar + header injected by JS
+    ══════════════════════════════════════════ -->
+    <div id="app-shell" class="flex h-screen overflow-hidden">
+        <!-- Sidebar slot -->
+        <div id="sidebar-slot"></div>
+
+        <!-- Main area -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div id="header-slot"></div>
+
+            <!-- ════════ SCROLLABLE CONTENT ════════ -->
+            <main class="flex-1 overflow-y-auto" style="padding:24px 28px;display:flex;flex-direction:column;gap:24px;">
+
+                <!-- ── Hero / Sprint Banner ── -->
+                <div id="sprint-hero-banner" class="hero-banner shadow-2xl">
+                    <div class="hero-mesh-orb"></div>
+                    <div
+                        style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
+                        <div>
+                            <div class="sprint-badge" style="margin-bottom:12px;">
+                                <span
+                                    style="width:6px;height:6px;border-radius:50%;background:#00AEEF;display:inline-block;box-shadow:0 0 6px rgba(0,174,239,0.8);"></span>
+                                Currently Active
+                            </div>
+                            <h1
+                                style="font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;margin-bottom:8px;">
+                                Sprint 1 — Warehouse Dispatch Compliance</h1>
+                            <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">PB1 Auth &nbsp;·&nbsp; PB2
+                                Batches &nbsp;·&nbsp; PB3 Retailer Orders &nbsp;·&nbsp; PB4 Request Mgmt &nbsp;·&nbsp;
+                                PB5 Barcode &nbsp;·&nbsp; PB6 FEFO Dispatch</p>
+                        </div>
+                        <div style="text-align:center;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:16px 28px;backdrop-filter:blur(8px);"
+                            class="hidden md:block">
+                            <div
+                                style="font-size:42px;font-weight:800;letter-spacing:-0.04em;line-height:1;font-family:'DM Mono',monospace;">
+                                6</div>
+                            <div
+                                style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;opacity:0.7;margin-top:6px;">
+                                Backlog Items</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Bento Stats Grid ── -->
+                <div>
+                    <div class="section-label">Live Metrics</div>
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;" class="lg:grid-cols-4">
+                        <!-- Total Batches -->
+                        <div class="bento-card" style="padding:22px 24px;">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                                <div>
+                                    <div class="stat-label">Total Batches</div>
+                                    <div class="stat-number text-slate-900" id="stat-total-batches"><span
+                                            class="stat-shimmer"></span></div>
+                                    <div class="stat-sub">In system</div>
+                                </div>
+                                <div class="stat-icon"
+                                    style="background:linear-gradient(135deg,rgba(0,86,184,0.12),rgba(0,48,135,0.08));">
+                                    <svg style="width:22px;height:22px;color:#0057B8;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Compliant -->
+                        <div class="bento-card" style="padding:22px 24px;">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                                <div>
+                                    <div class="stat-label">Compliant</div>
+                                    <div class="stat-number" style="color:#16a34a;" id="stat-compliant"><span
+                                            class="stat-shimmer"></span></div>
+                                    <div class="stat-sub">MRSL ≥ 20%</div>
+                                </div>
+                                <div class="stat-icon"
+                                    style="background:linear-gradient(135deg,rgba(34,197,94,0.12),rgba(22,163,74,0.08));">
+                                    <svg style="width:22px;height:22px;color:#16a34a;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- At Risk -->
+                        <div class="bento-card" style="padding:22px 24px;">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                                <div>
+                                    <div class="stat-label">At Risk</div>
+                                    <div class="stat-number" style="color:#d97706;" id="stat-atrisk"><span
+                                            class="stat-shimmer"></span></div>
+                                    <div class="stat-sub">MRSL &lt; 20% or &le;30d</div>
+                                </div>
+                                <div class="stat-icon"
+                                    style="background:linear-gradient(135deg,rgba(245,158,11,0.14),rgba(217,119,6,0.08));">
+                                    <svg style="width:22px;height:22px;color:#d97706;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dispatch Orders -->
+                        <div class="bento-card" style="padding:22px 24px;">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                                <div>
+                                    <div class="stat-label">Dispatch Orders</div>
+                                    <div class="stat-number" style="color:#003087;" id="stat-orders"><span
+                                            class="stat-shimmer"></span></div>
+                                    <div class="stat-sub">Processed</div>
+                                </div>
+                                <div class="stat-icon"
+                                    style="background:linear-gradient(135deg,rgba(0,48,135,0.12),rgba(0,87,184,0.07));">
+                                    <svg style="width:22px;height:22px;color:#003087;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── PB6: Aging Bucket Classification ── -->
+                <div>
+                    <div class="section-label" style="display:flex;align-items:center;gap:8px;">
+                        Aging Buckets · PB6
+                        <span
+                            style="font-size:10px;font-weight:500;text-transform:none;letter-spacing:0;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:6px;border:1px solid #e2e8f0;">Real-time
+                            FEFO classification</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(1,1fr);gap:16px;" class="lg:grid-cols-3"
+                        id="aging-buckets-grid">
+
+                        <!-- Critical: 0–30 days -->
+                        <div class="bucket-card bucket-critical">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                                        <div class="bucket-ring"></div>
+                                        <div class="bucket-label">Critical</div>
+                                        <span class="bucket-range-badge">0 – 30 days</span>
+                                    </div>
+                                    <div class="bucket-count" id="bucket-critical-qty"><span class="stat-shimmer"
+                                            style="width:48px;height:32px;"></span></div>
+                                    <div class="bucket-meta">Total units at risk</div>
+                                    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                                        <span style="font-size:11px;font-weight:600;color:#475569;">Batches:</span>
+                                        <span id="bucket-critical-count"
+                                            style="font-size:13px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;">—</span>
+                                        <span id="bucket-critical-actioned"
+                                            style="font-size:10px;font-weight:600;color:#94a3b8;margin-left:4px;"></span>
+                                    </div>
+                                    <a class="critical-toggle-link" id="critical-toggle-btn"
+                                        onclick="toggleCriticalPanel()">
+                                        <span id="critical-toggle-text">View critical batches</span>
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </a>
+                                    <div
+                                        style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                                        <button id="btn-alert-planner" class="btn-alert-planner"
+                                            onclick="sendCriticalAlert(this)"
+                                            title="Email planner about critical batches">
+                                            <svg style="width:13px;height:13px;" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                            Alert Planner
+                                        </button>
+                                        <button class="btn-ej-setup" onclick="openEmailSetup()"
+                                            title="Configure EmailJS">
+                                            <svg style="width:11px;height:11px;" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                            Setup
+                                        </button>
+                                        <button id="btn-auto-alert-toggle" onclick="toggleAutoAlerts()"
+                                            title="Toggle automated background alerts"
+                                            style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;border:1.5px solid #e2e8f0;cursor:pointer;transition:all 0.2s;background:#f8fafc;color:#475569;">
+                                            <span id="auto-alert-dot"
+                                                style="width:7px;height:7px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>
+                                            <span id="auto-alert-label">Auto Alerts Off</span>
+                                        </button>
+                                        <span id="alert-sent-tag"
+                                            style="display:none;font-size:10px;font-weight:700;color:#16a34a;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);padding:2px 9px;border-radius:999px;">✓
+                                            Sent</span>
+                                    </div>
+                                </div>
+                                <div class="bucket-icon">
+                                    <svg style="width:22px;height:22px;color:#dc2626;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Warning: 31–60 days -->
+                        <div class="bucket-card bucket-warning">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                                        <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></div>
+                                        <div class="bucket-label">Warning</div>
+                                        <span class="bucket-range-badge">31 – 60 days</span>
+                                    </div>
+                                    <div class="bucket-count" id="bucket-warning-qty"><span class="stat-shimmer"
+                                            style="width:48px;height:32px;"></span></div>
+                                    <div class="bucket-meta">Total units at risk</div>
+                                    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                                        <span style="font-size:11px;font-weight:600;color:#475569;">Batches:</span>
+                                        <span id="bucket-warning-count"
+                                            style="font-size:13px;font-weight:700;color:#d97706;font-family:'DM Mono',monospace;">—</span>
+                                    </div>
+                                </div>
+                                <div class="bucket-icon">
+                                    <svg style="width:22px;height:22px;color:#d97706;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stable: 60+ days -->
+                        <div class="bucket-card bucket-stable">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                                        <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></div>
+                                        <div class="bucket-label">Stable</div>
+                                        <span class="bucket-range-badge">60+ days</span>
+                                    </div>
+                                    <div class="bucket-count" id="bucket-stable-qty"><span class="stat-shimmer"
+                                            style="width:48px;height:32px;"></span></div>
+                                    <div class="bucket-meta">Total units (safe stock)</div>
+                                    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                                        <span style="font-size:11px;font-weight:600;color:#475569;">Batches:</span>
+                                        <span id="bucket-stable-count"
+                                            style="font-size:13px;font-weight:700;color:#16a34a;font-family:'DM Mono',monospace;">—</span>
+                                    </div>
+                                </div>
+                                <div class="bucket-icon">
+                                    <svg style="width:22px;height:22px;color:#16a34a;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- PB7: Critical batch detail panel (expandable) -->
+                    <div class="critical-detail-panel" id="critical-detail-panel">
+                        <div
+                            style="padding:18px 24px 16px;border-bottom:1px solid rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:space-between;">
+                            <div>
+                                <h3 style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">
+                                    Critical Batches — Action Required</h3>
+                                <p style="font-size:12px;color:#94a3b8;margin-top:2px;">Batches expiring within 30 days
+                                    · Mark as actioned after review</p>
+                            </div>
+                            <div id="critical-actioned-summary"
+                                style="font-size:11px;font-weight:600;color:#64748b;background:#f1f5f9;padding:4px 12px;border-radius:8px;border:1px solid #e2e8f0;">
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Batch #</th>
+                                        <th>Product</th>
+                                        <th>Expiry</th>
+                                        <th>Days Left</th>
+                                        <th>Qty</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="critical-batch-tbody">
+                                    <tr>
+                                        <td colspan="7"
+                                            style="text-align:center;padding:30px;font-size:13px;color:#94a3b8;">No
+                                            critical batches</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Warehouse Risk View (Map) ── -->
+                <div id="section-regional-map">
+                    <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
+                        Warehouse Risk View
+                        <select id="map-warehouse-filter" onchange="filterMap()" style="padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; outline:none; background:rgba(255,255,255,0.7); border:1px solid #e2e8f0;">
+                            <option value="ALL">All Warehouses</option>
+                            <option value="Colombo-01">Colombo-01</option>
+                            <option value="Galle-02">Galle-02</option>
+                            <option value="Kandy-03">Kandy-03</option>
+                            <option value="Negombo-04">Negombo-04</option>
+                        </select>
+                    </div>
+                    <div class="table-glass" style="padding:8px; border-radius: 20px;">
+                        <div id="regional-map" style="height: 420px; border-radius: 14px; z-index: 1;"></div>
+                    </div>
+                </div>
+
+                <!-- ── Batch Overview mini-table ── -->
+                <div>
+                    <div class="section-label">Batch Overview</div>
+                    <div class="table-glass">
+                        <!-- Table header -->
+                        <div
+                            style="padding:18px 24px 16px;border-bottom:1px solid rgba(226,232,240,0.7);display:flex;align-items:center;justify-content:space-between;">
+                            <div>
+                                <h3 style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">FEFO
+                                    Batch Queue</h3>
+                                <p style="font-size:12px;color:#94a3b8;margin-top:2px;">Sorted by expiry date · First
+                                    Expiry First Out order</p>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <select id="table-warehouse-filter" onchange="renderTable()"
+                                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:600;color:#0f172a;outline:none;background:#fff;cursor:pointer;">
+                                    <option value="ALL">All Warehouses</option>
+                                    <option value="Colombo-01">Colombo-01</option>
+                                    <option value="Galle-02">Galle-02</option>
+                                    <option value="Kandy-03">Kandy-03</option>
+                                    <option value="Negombo-04">Negombo-04</option>
+                                </select>
+                                <a href="batches.html"
+                                    style="font-size:13px;font-weight:600;padding:8px 18px;border-radius:12px;color:#fff;background:linear-gradient(135deg,#003087,#0057B8);box-shadow:0 4px 12px rgba(0,48,135,0.25);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);text-decoration:none;display:inline-flex;align-items:center;gap:6px;"
+                                    onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 20px rgba(0,48,135,0.32)'"
+                                    onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(0,48,135,0.25)'">
+                                    View All
+                                    <svg style="width:14px;height:14px;" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Batch #</th>
+                                        <th>Product</th>
+                                        <th>Expiry</th>
+                                        <th>Qty</th>
+                                        <th>Shelf Life %</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-batch-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align:center;padding:40px 18px;">
+                                            <div
+                                                style="display:flex;align-items:center;justify-content:center;gap:10px;color:#94a3b8;font-size:14px;">
+                                                <svg style="width:18px;height:18px;animation:spin 1s linear infinite;"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                                Loading batches…
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Quick Actions Bento ── -->
+                <div>
+                    <div class="section-label">Quick Actions</div>
+                    <div style="display:grid;grid-template-columns:repeat(1,1fr);gap:14px;" class="md:grid-cols-3">
+
+                        <a href="batches.html" class="action-card group" id="qa-batches">
+                            <div class="action-icon"
+                                style="width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#001a4d,#003087);box-shadow:0 6px 18px rgba(0,48,135,0.3);">
+                                <svg style="width:26px;height:26px;color:#fff;" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4v16m8-8H4" />
+                                </svg>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;transition:color 0.2s;"
+                                    class="group-hover:text-blue-700">Add Batch</div>
+                                <div style="font-size:12.5px;color:#94a3b8;margin-top:3px;">PB2 · Register a new product
+                                    batch</div>
+                            </div>
+                            <svg style="width:16px;height:16px;color:#cbd5e1;flex-shrink:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                class="group-hover:text-blue-400 group-hover:translate-x-1">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+
+                        <a href="scan.html" class="action-card group" id="qa-scan">
+                            <div class="action-icon"
+                                style="width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#00AEEF,#0057B8);box-shadow:0 6px 18px rgba(0,174,239,0.28);">
+                                <svg style="width:26px;height:26px;color:#fff;" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1.5" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7v10M12 7v10M16 7v10" />
+                                </svg>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;"
+                                    class="group-hover:text-blue-700">Scan Barcode</div>
+                                <div style="font-size:12.5px;color:#94a3b8;margin-top:3px;">PB5 · Look up a batch in
+                                    real-time</div>
+                            </div>
+                            <svg style="width:16px;height:16px;color:#cbd5e1;flex-shrink:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                class="group-hover:text-blue-400 group-hover:translate-x-1">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+
+                        <a href="dispatch.html" class="action-card group" id="qa-dispatch">
+                            <div class="action-icon"
+                                style="width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 6px 18px rgba(34,197,94,0.28);">
+                                <svg style="width:26px;height:26px;color:#fff;" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;"
+                                    class="group-hover:text-green-700">FEFO Dispatch</div>
+                                <div style="font-size:12.5px;color:#94a3b8;margin-top:3px;">PB6 · Validate and process a
+                                    dispatch order</div>
+                            </div>
+                            <svg style="width:16px;height:16px;color:#cbd5e1;flex-shrink:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                class="group-hover:text-green-400 group-hover:translate-x-1">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
+    <!-- ── EmailJS Setup Modal ── -->
+    <div class="ej-modal-overlay" id="ej-modal-overlay" onclick="closeEmailSetup(event)">
+        <div class="ej-modal" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Configure EmailJS
+                        Alert</h2>
+                    <p style="font-size:12px;color:#94a3b8;margin-top:4px;">Keys are saved in <code
+                            style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px;">localStorage</code>
+                        — never sent to our servers.</p>
+                </div>
+                <button onclick="closeEmailSetup()"
+                    style="border:none;background:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:20px;line-height:1;">×</button>
+            </div>
+
+            <!-- Steps helper -->
+            <div
+                style="background:linear-gradient(135deg,rgba(0,86,184,0.06),rgba(0,174,239,0.04));border:1px solid rgba(0,86,184,0.12);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:11.5px;color:#475569;line-height:1.7;">
+                <strong style="color:#003087;">Quick setup:</strong><br>
+                1. Sign up free at <a href="https://emailjs.com" target="_blank"
+                    style="color:#0057B8;font-weight:600;">emailjs.com</a><br>
+                2. Create an <strong>Email Service</strong> → copy the Service ID<br>
+                3. Create an <strong>Email Template</strong> → copy the Template ID<br>
+                4. Go to Account → copy your <strong>Public Key</strong>
+            </div>
+
+            <div class="ej-field">
+                <label>Public Key</label>
+                <input id="ej-public-key" type="text" placeholder="user_XXXXXXXXXXXX" />
+            </div>
+            <div class="ej-field">
+                <label>Service ID</label>
+                <input id="ej-service-id" type="text" placeholder="service_XXXXXXXX" />
+            </div>
+            <div class="ej-field">
+                <label>Template ID</label>
+                <input id="ej-template-id" type="text" placeholder="template_XXXXXXXX" />
+            </div>
+            <div class="ej-field">
+                <label>Planner Email</label>
+                <input id="ej-planner-email" type="email" placeholder="planner@nestle.com" />
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:6px;">
+                <button onclick="saveEmailConfig()"
+                    style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#003087,#0057B8);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,48,135,0.25);transition:all 0.2s ease;"
+                    onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save &amp; Test
+                    Send</button>
+                <button onclick="clearEmailConfig()"
+                    style="padding:11px 18px;border-radius:12px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s ease;"
+                    onmouseover="this.style.background='#f8fafc'"
+                    onmouseout="this.style.background='#fff'">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive grid override */
+        @media (min-width: 1024px) {
+            .lg\:grid-cols-4 {
+                grid-template-columns: repeat(4, 1fr) !important;
+            }
+
+            .lg\:grid-cols-3 {
+                grid-template-columns: repeat(3, 1fr) !important;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .md\:grid-cols-3 {
+                grid-template-columns: repeat(3, 1fr) !important;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            .md\:block {
+                display: block !important;
+            }
+        }
+
+        /* PB7 Deep link highlight */
+        .highlight-pulse {
+            animation: highlightPulse 2s cubic-bezier(0.4, 0, 0.2, 1) 2;
+        }
+
+        @keyframes highlightPulse {
+            0% {
+                background: rgba(0, 174, 239, 0);
+            }
+
+            50% {
+                background: rgba(0, 174, 239, 0.15);
+            }
+
+            100% {
+                background: rgba(0, 174, 239, 0);
+            }
+        }
+    </style>
+
+    <!-- ══════════════════════════════════════════
+         FIREBASE — Dashboard
+    ══════════════════════════════════════════ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, getDocs, getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { buildSidebar, buildHeader, toast, fmtDate, shelfLifePct, mrslStatus, badgeHtml, shelfBar, startClock } from './sidebar.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // ── Auth guard ──
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+
+            // Sync sessionStorage (in case of direct navigation / refresh)
+            if (!sessionStorage.getItem('user_uid')) {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                const data = snap.exists() ? snap.data() : {};
+                sessionStorage.setItem('user_uid', user.uid);
+                sessionStorage.setItem('user_name', data.displayName || user.email.split('@')[0]);
+                sessionStorage.setItem('user_role', data.role || 'Warehouse Staff');
+                sessionStorage.setItem('user_email', user.email);
+            }
+
+            // ── RBAC: Prevent Retailers from accessing staff portal ──
+            const role = sessionStorage.getItem('user_role') || '';
+            if (role.toLowerCase() === 'retailer') {
+                sessionStorage.setItem('access_denied_msg', 'Access Denied: Internal Staff Only');
+                window.location.href = 'retailer.html';
+                return;
+            }
+
+            // ── RBAC: Supervisor, Demand Planner, or Logistics Manager ──
+            const roleLower = role.toLowerCase();
+            const isSupervisor = roleLower.includes('supervisor');
+            const isDemandPlanner = roleLower.includes('demand planner') || roleLower.includes('demandplanner');
+            const isLogisticsManager = roleLower.includes('logistics');
+            
+            if (!isSupervisor && !isDemandPlanner && !isLogisticsManager) {
+                sessionStorage.setItem('access_denied_msg', 'Access Denied: Managers Only');
+                window.location.href = 'batches.html';
+                return;
+            }
+
+            // Sub-RBAC: if only Logistics Manager, hide other dashboard sections
+            if (isLogisticsManager && !isSupervisor && !isDemandPlanner) {
+                 document.querySelectorAll('.section-label').forEach(el => {
+                     // Hides container of sections if it's not the map
+                     const parent = el.parentElement;
+                     if (parent.id !== 'section-regional-map') {
+                         parent.style.display = 'none';
+                     }
+                 });
+                 // Also hide Live Metrics grid and the Sprint Banner
+                 const metricsGrid = document.querySelector('.metrics-grid');
+                 if (metricsGrid) metricsGrid.style.display = 'none';
+                 
+                 const sprintBanner = document.getElementById('sprint-hero-banner');
+                 if (sprintBanner) sprintBanner.style.display = 'none';
+            }
+
+            // Inject sidebar & header
+            document.getElementById('sidebar-slot').innerHTML = buildSidebar('dashboard');
+            document.getElementById('header-slot').innerHTML = buildHeader('Dashboard', 'Warehouse overview & live metrics');
+            startClock();
+            loadData();
+        });
+
+        // ── Logout ──
+        window.doLogout = async () => {
+            await signOut(auth);
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        };
+
+        // ── PB6: Aging Bucket Classification metadata ──
+        const BUCKET_META = {
+            'A': { id: 'A', name: 'Bucket A (Critical)', prefix: '[URGENT]', clean: 'URGENT', risk: 'High Value at Risk. Product is within 30 days of expiry.' },
+            'B': { id: 'B', name: 'Bucket B (Warning)', prefix: '[WARNING]', clean: 'WARNING', risk: 'Moderate risk. Early warning for sales coordination.' },
+            'C': { id: 'C', name: 'Bucket C (Stable)', prefix: '[INFO]', clean: 'INFO', risk: 'Low risk. Stock is healthy and stable.' }
+        };
+
+        const WAREHOUSE_COORDS = {
+            'Colombo-01': [6.9271, 79.8612],
+            'Galle-02': [6.0535, 80.2210],
+            'Kandy-03': [7.2906, 80.6337],
+            'Negombo-04': [7.2008, 79.8737]
+        };
+
+        let regionalMap = null;
+        let mapMarkersLayer = null;
+
+        let criticalBucket = [];
+        let warningBucket = [];
+        let stableBucket = [];
+
+        function classifyBuckets(batches) {
+            criticalBucket = [];
+            warningBucket = [];
+            stableBucket = [];
+
+            const now = new Date();
+            batches.forEach(b => {
+                const exp = b.expiryDate.toDate ? b.expiryDate.toDate() : new Date(b.expiryDate);
+                const daysLeft = Math.round((exp - now) / (1000 * 60 * 60 * 24));
+
+                let bucketId = 'C';
+                if (daysLeft <= 30) bucketId = 'A';
+                else if (daysLeft <= 60) bucketId = 'B';
+
+                b._daysLeft = daysLeft;
+                b._bucket = bucketId;
+
+                if (bucketId === 'A') criticalBucket.push(b);
+                else if (bucketId === 'B') warningBucket.push(b);
+                else stableBucket.push(b);
+            });
+        }
+
+        function sumQty(arr) {
+            return arr.reduce((s, b) => s + (b.quantity || 0), 0);
+        }
+
+        function updateBucketUI() {
+            const activeCritical = criticalBucket.filter(b => !b.isActioned);
+            const actionedCritical = criticalBucket.filter(b => b.isActioned);
+
+            // Critical — show only non-actioned totals in the headline
+            animateStat('bucket-critical-qty', sumQty(activeCritical), '#dc2626');
+            document.getElementById('bucket-critical-count').textContent = activeCritical.length;
+
+            // Actioned annotation
+            const actionedEl = document.getElementById('bucket-critical-actioned');
+            if (actionedEl) {
+                actionedEl.textContent = actionedCritical.length ? `(${actionedCritical.length} actioned)` : '';
+            }
+
+            // Warning
+            animateStat('bucket-warning-qty', sumQty(warningBucket), '#d97706');
+            document.getElementById('bucket-warning-count').textContent = warningBucket.length;
+
+            // Stable
+            animateStat('bucket-stable-qty', sumQty(stableBucket), '#16a34a');
+            document.getElementById('bucket-stable-count').textContent = stableBucket.length;
+
+            // Update toggle text
+            const toggleText = document.getElementById('critical-toggle-text');
+            if (toggleText) {
+                toggleText.textContent = criticalBucket.length
+                    ? `View ${criticalBucket.length} critical batch${criticalBucket.length > 1 ? 'es' : ''}`
+                    : 'No critical batches';
+            }
+
+            // Update the critical detail panel
+            renderCriticalDetailPanel();
+
+            // PB7: Auto-alert planner if critical count grew
+            checkAutoAlert();
+        }
+
+        // ── PB7: Critical detail table ──
+        function renderCriticalDetailPanel() {
+            const tbody = document.getElementById('critical-batch-tbody');
+            const summaryEl = document.getElementById('critical-actioned-summary');
+            if (!tbody) return;
+
+            const actionedCount = criticalBucket.filter(b => b.isActioned).length;
+            if (summaryEl) {
+                summaryEl.textContent = `${actionedCount} of ${criticalBucket.length} actioned`;
+            }
+
+            if (!criticalBucket.length) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;font-size:13px;color:#94a3b8;">🎉 No critical batches — all stock is healthy</td></tr>`;
+                return;
+            }
+
+            // Sort: non-actioned first, then by daysLeft ascending
+            const sorted = [...criticalBucket].sort((a, b) => {
+                if (a.isActioned !== b.isActioned) return a.isActioned ? 1 : -1;
+                return a._daysLeft - b._daysLeft;
+            });
+
+            tbody.innerHTML = sorted.map(b => {
+                const isActioned = !!b.isActioned;
+                const rowClass = isActioned ? 'actioned-row' : '';
+                const daysColor = b._daysLeft <= 7 ? '#dc2626' : b._daysLeft <= 15 ? '#ea580c' : '#d97706';
+                const daysLabel = b._daysLeft <= 0 ? 'EXPIRED' : `${b._daysLeft}d`;
+
+                const actionBtn = isActioned
+                    ? `<span class="actioned-badge"><svg style="width:12px;height:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>Actioned</span>`
+                    : `<button class="btn-action btn-action-mark" onclick="markAsActioned('${b.id}', this)">
+                         <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                         Mark Actioned
+                       </button>`;
+
+                return `<tr class="${rowClass}" data-id="${b.id}">
+                    <td><span class="batch-num">${b.batchNumber}</span></td>
+                    <td style="font-weight:600;color:#0f172a;font-size:14px;">${b.productName}</td>
+                    <td style="font-size:13px;font-weight:500;color:#475569;font-family:'DM Mono',monospace;">${fmtDate(b.expiryDate)}</td>
+                    <td><span style="font-size:13px;font-weight:700;color:${daysColor};font-family:'DM Mono',monospace;">${daysLabel}</span></td>
+                    <td><span class="qty-mono">${b.quantity.toLocaleString()}</span></td>
+                    <td>${badgeHtml(isActioned ? 'Actioned' : 'Critical', isActioned ? 'gray' : 'red')}</td>
+                    <td>${actionBtn}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ── PB7: Toggle critical detail panel ──
+        window.toggleCriticalPanel = function () {
+            const panel = document.getElementById('critical-detail-panel');
+            const btn = document.getElementById('critical-toggle-btn');
+            if (!panel) return;
+            panel.classList.toggle('expanded');
+            if (btn) btn.classList.toggle('open');
+        };
+
+        // ── PB7: Mark batch as actioned in Firestore ──
+        window.markAsActioned = async function (batchId, btnEl) {
+            if (!batchId) return;
+            try {
+                // Disable button immediately
+                if (btnEl) {
+                    btnEl.disabled = true;
+                    btnEl.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block;">⏳</span> Saving…';
+                }
+                await updateDoc(doc(db, 'batches', batchId), { isActioned: true });
+                toast('Batch marked as actioned', 'success');
+                // UI will auto-update via onSnapshot
+            } catch (err) {
+                console.error('Failed to mark as actioned:', err);
+                toast('Failed to update batch — check permissions', 'error');
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = 'Mark Actioned';
+                }
+            }
+        };
+
+        // ── Load live data ──
+        function loadData() {
+            // Listen to batches (real-time)
+            const bq = query(collection(db, 'batches'), orderBy('expiryDate', 'asc'));
+            onSnapshot(bq, (snap) => {
+                const batches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const compliant = batches.filter(b => mrslStatus(b).ok).length;
+
+                // Animate stat updates
+                animateStat('stat-total-batches', batches.length, '#0f172a');
+                animateStat('stat-compliant', compliant, '#16a34a');
+                animateStat('stat-atrisk', batches.length - compliant, '#d97706');
+
+                // ── PB6: Classify into aging buckets & update cards ──
+                classifyBuckets(batches);
+                updateBucketUI();
+
+                // ── Regional Risk Map Update ──
+                updateRegionalMap(batches);
+
+                // Mini table — top 8 by FEFO
+                window._tableBatches = batches;
+                renderTable();
+            });
+
+            // Trigger for map filtering
+            window.filterMap = function() {
+                if (window._tableBatches) {
+                    updateRegionalMap(window._tableBatches);
+                }
+            };
+
+            // Dispatch orders count (one-time)
+            getDocs(collection(db, 'dispatch_orders')).then(snap => {
+                animateStat('stat-orders', snap.size, '#003087');
+            }).catch(() => {
+                document.getElementById('stat-orders').textContent = '0';
+            });
+
+            // Handle deep linking for batch highlights
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetBatchID = urlParams.get('batchID');
+            if (targetBatchID) {
+                // Wait for data to render, then expand and highlight
+                setTimeout(() => {
+                    const panel = document.getElementById('critical-detail-panel');
+                    const toggleBtn = document.getElementById('critical-toggle-btn');
+                    if (panel && toggleBtn) {
+                        panel.classList.add('expanded');
+                        toggleBtn.classList.add('open');
+                        const row = document.querySelector(`tr[data-id="${targetBatchID}"]`);
+                        if (row) {
+                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            row.classList.add('highlight-pulse');
+                        }
+                    }
+                }, 1200);
+            }
+        }
+
+        window.renderTable = function () {
+            const batches = window._tableBatches || [];
+            const filterLoc = document.getElementById('table-warehouse-filter');
+            const targetLoc = filterLoc ? filterLoc.value : 'ALL';
+
+            let filtered = batches;
+            if (targetLoc !== 'ALL') {
+                filtered = batches.filter(b => (b.location || 'Colombo-01') === targetLoc);
+            }
+
+            const tbody = document.getElementById('dashboard-batch-tbody');
+            if (!tbody) return;
+
+            const top = filtered.slice(0, 8);
+            if (!top.length) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 18px;font-size:14px;color:#94a3b8;">No batches yet. <a href="batches.html" style="color:#003087;font-weight:600;text-decoration:underline;">Add your first batch →</a></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = top.map(b => {
+                const ms = mrslStatus(b);
+                const pct = shelfLifePct(b.manufacturingDate, b.expiryDate);
+                return `<tr>
+                    <td><span class="batch-num">${b.batchNumber}</span></td>
+                    <td style="font-weight:600;color:#0f172a;font-size:14px;letter-spacing:-0.01em;">${b.productName}</td>
+                    <td style="font-size:13px;font-weight:500;color:#475569;font-family:'DM Mono',monospace;">${fmtDate(b.expiryDate)}</td>
+                    <td><span class="qty-mono">${b.quantity.toLocaleString()}</span></td>
+                    <td><div style="display:flex;align-items:center;gap:10px;">${shelfBar(pct)}<span style="font-size:12.5px;font-weight:600;color:#475569;font-family:'DM Mono',monospace;">${pct}%</span></div></td>
+                    <td>${badgeHtml(ms.label, ms.color)}</td>
+                </tr>`;
+            }).join('');
+        };
+
+
+        // ── Animated stat counter ──
+        function animateStat(id, target, color) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.color = color;
+            const start = parseInt(el.textContent) || 0;
+            const duration = 600;
+            const startTime = performance.now();
+            const tick = (now) => {
+                const elapsed = Math.min((now - startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - elapsed, 3);
+                el.textContent = Math.round(start + (target - start) * eased);
+                if (elapsed < 1) requestAnimationFrame(tick);
+                else el.textContent = target;
+            };
+            requestAnimationFrame(tick);
+        }
+
+        // ── Regional Map Setup & Live Sync ──
+        function initRegionalMap() {
+            if (regionalMap) return;
+            const mapEl = document.getElementById('regional-map');
+            if (!mapEl) return;
+
+            regionalMap = L.map('regional-map').setView([7.8731, 80.7718], 7); // Center roughly on Sri Lanka
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(regionalMap);
+
+            mapMarkersLayer = L.layerGroup().addTo(regionalMap);
+        }
+
+        function createCustomMarkerIcon(colorCode, borderCode) {
+            return L.divIcon({
+                className: 'custom-leaflet-marker',
+                html: `<div style="
+                    width: 24px;
+                    height: 24px;
+                    background: ${colorCode};
+                    border: 3px solid ${borderCode};
+                    border-radius: 50%;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                "></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+        }
+
+        function updateRegionalMap(batches) {
+            initRegionalMap();
+            if (!mapMarkersLayer) return;
+            mapMarkersLayer.clearLayers();
+
+            // 1. Data Aggregation for every warehouse
+            const whData = {};
+            const selectedWh = document.getElementById('map-warehouse-filter') ? document.getElementById('map-warehouse-filter').value : 'ALL';
+
+            batches.forEach(b => {
+                const loc = b.location || 'Colombo-01'; // Fallback
+                if (selectedWh !== 'ALL' && loc !== selectedWh) return;
+
+                if (!whData[loc]) {
+                    whData[loc] = { valA: 0, valB: 0, valC: 0, total: 0 };
+                }
+                const qty = b.quantity || 0;
+                whData[loc].total += qty;
+                if (b._bucket === 'A') whData[loc].valA += qty;
+                else if (b._bucket === 'B') whData[loc].valB += qty;
+                else whData[loc].valC += qty;
+            });
+
+            // 2. Weighted Calculation & Display
+            for (const [wh, data] of Object.entries(whData)) {
+                if (!WAREHOUSE_COORDS[wh] || data.total === 0) continue;
+
+                const { valA, valB, valC, total } = data;
+
+                let colorCode, borderCode, statusName;
+                if (valA / total > 0.15 || (valA + valB) / total > 0.40) {
+                    if (valA / total > 0.15) {
+                        // Red
+                        colorCode = '#dc2626'; borderCode = '#fca5a5'; statusName = 'Critical Risk';
+                    } else {
+                        // Amber
+                        colorCode = '#d97706'; borderCode = '#fcd34d'; statusName = 'Warning Zone';
+                    }
+                } else {
+                    // Green
+                    colorCode = '#16a34a'; borderCode = '#86efac'; statusName = 'Stable operations';
+                }
+
+                // 3. Detailed Popup with small bar chart
+                const pctA = Math.round((valA / total) * 100);
+                const pctB = Math.round((valB / total) * 100);
+                const pctC = Math.round((valC / total) * 100);
+
+                const popupHtml = `
+                    <div style="font-family:'DM Sans',sans-serif; min-width: 200px;">
+                        <h4 style="font-size: 14px; font-weight:700; margin:0 0 2px; color:#0f172a;">${wh}</h4>
+                        <p style="font-size: 12px; margin:0 0 10px; color:${colorCode}; font-weight:600;">${statusName}</p>
+                        
+                        <div style="font-size: 11.5px; color:#475569; display:flex; flex-direction:column; gap:6px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span>Bucket A (Critical)</span>
+                                <span style="font-family:'DM Mono',monospace; font-weight:600;">${valA.toLocaleString()}</span>
+                            </div>
+                            <div style="width:100%; background:#f1f5f9; height:6px; border-radius:4px; overflow:hidden;">
+                                <div style="height:100%; width:${pctA}%; background:#ef4444;"></div>
+                            </div>
+                            
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span>Bucket B (Warning)</span>
+                                <span style="font-family:'DM Mono',monospace; font-weight:600;">${valB.toLocaleString()}</span>
+                            </div>
+                            <div style="width:100%; background:#f1f5f9; height:6px; border-radius:4px; overflow:hidden;">
+                                <div style="height:100%; width:${pctB}%; background:#f59e0b;"></div>
+                            </div>
+
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span>Bucket C (Stable)</span>
+                                <span style="font-family:'DM Mono',monospace; font-weight:600;">${valC.toLocaleString()}</span>
+                            </div>
+                            <div style="width:100%; background:#f1f5f9; height:6px; border-radius:4px; overflow:hidden;">
+                                <div style="height:100%; width:${pctC}%; background:#22c55e;"></div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:12px; font-weight:700; display:flex; justify-content:space-between;">
+                            <span>Total Units</span>
+                            <span style="font-family:'DM Mono',monospace;">${total.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+
+                const marker = L.marker(WAREHOUSE_COORDS[wh], {
+                    icon: createCustomMarkerIcon(colorCode, borderCode)
+                }).bindPopup(popupHtml);
+
+                mapMarkersLayer.addLayer(marker);
+            }
+        }
+
+        // ══════════════════════════════════════════
+        //  PB7 — EmailJS Critical Alert System
+        // ══════════════════════════════════════════
+
+        // ── Auto-alert toggle (persisted to localStorage) ──
+        const AUTO_ALERT_KEY = 'ssams_auto_alerts_enabled';
+        function isAutoAlertEnabled() {
+            return localStorage.getItem(AUTO_ALERT_KEY) === 'true';
+        }
+        function syncAutoAlertUI() {
+            const enabled = isAutoAlertEnabled();
+            const dot = document.getElementById('auto-alert-dot');
+            const label = document.getElementById('auto-alert-label');
+            const btn = document.getElementById('btn-auto-alert-toggle');
+            if (!dot || !label || !btn) return;
+            if (enabled) {
+                dot.style.background = '#16a34a';
+                dot.style.boxShadow = '0 0 6px rgba(22,163,74,0.6)';
+                label.textContent = 'Auto Alerts On';
+                btn.style.borderColor = '#86efac';
+                btn.style.background = 'rgba(34,197,94,0.08)';
+                btn.style.color = '#16a34a';
+            } else {
+                dot.style.background = '#94a3b8';
+                dot.style.boxShadow = 'none';
+                label.textContent = 'Auto Alerts Off';
+                btn.style.borderColor = '#e2e8f0';
+                btn.style.background = '#f8fafc';
+                btn.style.color = '#475569';
+            }
+        }
+        window.toggleAutoAlerts = function () {
+            const next = !isAutoAlertEnabled();
+            localStorage.setItem(AUTO_ALERT_KEY, next.toString());
+            syncAutoAlertUI();
+            toast(next ? '✅ Automated alerts ENABLED' : '⏸ Automated alerts PAUSED', next ? 'success' : 'info');
+        };
+        // Sync button state on load
+        document.addEventListener('DOMContentLoaded', syncAutoAlertUI);
+
+        // ── Load persisted EmailJS config ──
+        const EJ_KEY = 'ssams_ej_config';
+        function getEjConfig() {
+            try { return JSON.parse(localStorage.getItem(EJ_KEY)) || {}; } catch { return {}; }
+        }
+        function saveEjConfig(cfg) {
+            localStorage.setItem(EJ_KEY, JSON.stringify(cfg));
+        }
+
+        // Check for batch-by-batch transitions to prevent spam
+        async function checkAutoAlert() {
+            if (!isAutoAlertEnabled()) {
+                console.log('[SSAMS] Auto-alerts are currently PAUSED (Dashboard Toggle).');
+                return;
+            }
+            const cfg = getEjConfig();
+            if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId || !cfg.plannerEmail) {
+                console.warn('[SSAMS] EmailJS config incomplete. Auto-alert skipped.');
+                return;
+            }
+
+            // Iterate all active (non-actioned) batches
+            const allActive = [...criticalBucket, ...warningBucket, ...stableBucket].filter(b => !b.isActioned);
+            console.log(`[SSAMS] Checking auto-alerts for ${allActive.length} active batches...`);
+
+            for (const b of allActive) {
+                const current = b._bucket; // 'A', 'B', or 'C'
+                const last = b.lastAlertedBucket || 'C'; // Default to stable if unknown
+
+                // Trigger if moved to a strictly more urgent bucket
+                const isMoreUrgent = (current === 'A' && last !== 'A') || (current === 'B' && last === 'C');
+
+                if (isMoreUrgent) {
+                    console.log(`[SSAMS] Transition detected for ${b.batchNumber}: ${last} -> ${current}. Triggering alert...`);
+                    await sendBatchAlert(b, true);
+                }
+            }
+        }
+
+        // ── Main send function for a specific batch ──
+        window.sendBatchAlert = async function (batch, isAuto = false, btnEl = null) {
+            if (!isAutoAlertEnabled() && isAuto) {
+                console.warn('[SSAMS] Auto-alert blocked - toggle is OFF.');
+                return;
+            }
+            const cfg = getEjConfig();
+            if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId || !cfg.plannerEmail) {
+                if (!isAuto) {
+                    toast('Configure EmailJS first — click the ⚙ Setup button', 'warning');
+                    openEmailSetup();
+                }
+                return;
+            }
+
+            // Button loading state
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block;">⌛</span> Sending…';
+            }
+
+            const meta = BUCKET_META[batch._bucket];
+            const baseUrl = window.location.origin + window.location.pathname;
+            const actionLink = `${baseUrl}?batchID=${batch.id}`;
+            const sentBy = sessionStorage.getItem('user_name') || 'SSAMS System';
+            const now = new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+
+            const templateParams = {
+                // Matching your specific template screenshot:
+                email: cfg.plannerEmail,           // Fixes the "Recipients address is empty" error
+                PRIORITY_PREFIX: meta.prefix,                // Matches your {{PRIORITY_PREFIX}} tag
+
+                // Content variables (sending both styles to be safe)
+                priority_prefix: meta.prefix,
+                priority_prefix_clean: meta.clean,
+                PRIORITY_PREFIX_CLEAN: meta.clean,
+                bucket_name: meta.name,
+                sku: batch.productName,
+                SKU: batch.productName,
+                batch_no: batch.batchNumber,
+                BATCH_NO: batch.batchNumber,
+                days_left: batch._daysLeft.toString(),
+                location: batch.location || 'N/A',
+                risk_description: meta.risk,
+                action_link: actionLink,
+                to_email: cfg.plannerEmail,           // Just in case
+                from_name: `Nestlé SSAMS — ${sentBy}`,
+                alert_time: now,
+                // Subject for your inbox
+                subject: `${meta.prefix} ${meta.clean} Expiry Alert: ${batch.productName}`
+            };
+
+            console.log('[SSAMS] Final Sync Params:', templateParams);
+
+            try {
+                console.log(`[SSAMS] Initializing EmailJS with key: ${cfg.publicKey.substring(0, 4)}...`);
+                emailjs.init(cfg.publicKey);
+
+                console.log(`[SSAMS] Sending ${meta.clean} alert via ${cfg.serviceId} / ${cfg.templateId}...`);
+                const res = await emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
+                console.log('[SSAMS] EmailJS response:', res);
+
+                // Update Firestore to prevent re-alerting for this tier
+                console.log(`[SSAMS] Updating Firestore lastAlertedBucket for ${batch.batchNumber} to ${batch._bucket}`);
+                await updateDoc(doc(db, 'batches', batch.id), {
+                    lastAlertedBucket: batch._bucket
+                });
+
+                // Success feedback
+                const sentTag = document.getElementById('alert-sent-tag');
+                if (sentTag) {
+                    sentTag.style.display = 'inline-flex';
+                    setTimeout(() => { sentTag.style.display = 'none'; }, 8000);
+                }
+                if (!isAuto) toast(`Alert sent to ${cfg.plannerEmail}`, 'success');
+                console.log(`[SSAMS] Alert successfully sent for batch ${batch.batchNumber}`);
+
+            } catch (err) {
+                console.error('[SSAMS] EmailJS error:', err);
+                const errMsg = err.text || err.message || 'Check your EmailJS config';
+                if (!isAuto) toast(`Alert failed: ${errMsg}`, 'error');
+            } finally {
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = '<svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Alert Planner';
+                }
+            }
+        };
+
+        // For manual "Alert Planner" button (sends the first active critical batch if multiple, or a generic test if empty)
+        window.sendCriticalAlert = async function (btnEl) {
+            const active = criticalBucket.filter(b => !b.isActioned);
+            if (!active.length) {
+                toast('No active critical batches to alert about', 'info');
+                return;
+            }
+            // Send alert for the most urgent batch manually
+            await sendBatchAlert(active[0], false, btnEl);
+        };
+
+        // ── Modal helpers ──
+        window.openEmailSetup = function () {
+            const cfg = getEjConfig();
+            document.getElementById('ej-public-key').value = cfg.publicKey || '';
+            document.getElementById('ej-service-id').value = cfg.serviceId || '';
+            document.getElementById('ej-template-id').value = cfg.templateId || '';
+            document.getElementById('ej-planner-email').value = cfg.plannerEmail || '';
+            document.getElementById('ej-modal-overlay').classList.add('open');
+        };
+
+        window.closeEmailSetup = function (evt) {
+            if (evt && evt.target !== document.getElementById('ej-modal-overlay')) return;
+            document.getElementById('ej-modal-overlay').classList.remove('open');
+        };
+
+        window.saveEmailConfig = async function () {
+            const cfg = {
+                publicKey: document.getElementById('ej-public-key').value.trim(),
+                serviceId: document.getElementById('ej-service-id').value.trim(),
+                templateId: document.getElementById('ej-template-id').value.trim(),
+                plannerEmail: document.getElementById('ej-planner-email').value.trim(),
+            };
+            if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId || !cfg.plannerEmail) {
+                toast('Please fill in all four fields', 'error');
+                return;
+            }
+            saveEjConfig(cfg);
+            document.getElementById('ej-modal-overlay').classList.remove('open');
+            toast('Config saved — sending test alert now…', 'success');
+            // Send a test alert immediately
+            await sendCriticalAlert(null, false);
+        };
+
+        window.clearEmailConfig = function () {
+            localStorage.removeItem(EJ_KEY);
+            ['ej-public-key', 'ej-service-id', 'ej-template-id', 'ej-planner-email'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            toast('EmailJS config cleared', 'info');
+        };
+    </script>
+</body>
+
+</html>

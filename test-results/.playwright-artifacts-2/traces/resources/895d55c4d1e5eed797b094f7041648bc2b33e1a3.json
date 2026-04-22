@@ -1,0 +1,25 @@
+{
+  "kind": "identitytoolkit#GetAccountInfoResponse",
+  "users": [
+    {
+      "localId": "PStPP7NKfYgwyF2yizbEEQFo17A2",
+      "email": "planner@nestle.com",
+      "passwordHash": "UkVEQUNURUQ=",
+      "emailVerified": false,
+      "passwordUpdatedAt": 1776448906360,
+      "providerUserInfo": [
+        {
+          "providerId": "password",
+          "federatedId": "planner@nestle.com",
+          "email": "planner@nestle.com",
+          "rawId": "planner@nestle.com"
+        }
+      ],
+      "validSince": "1776448906",
+      "disabled": false,
+      "lastLoginAt": "1776800691947",
+      "createdAt": "1776448906360",
+      "lastRefreshAt": "2026-04-21T19:44:51.947Z"
+    }
+  ]
+}

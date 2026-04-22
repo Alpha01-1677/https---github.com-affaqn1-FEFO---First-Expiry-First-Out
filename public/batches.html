@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestlé SSAMS — Batch Database · PB2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="app-shell" class="flex h-screen overflow-hidden">
+        <div id="sidebar-slot"></div>
+
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div id="header-slot"></div>
+
+            <!-- ════════ CONTENT ════════ -->
+            <main class="flex-1 overflow-y-auto p-6 space-y-6">
+
+
+
+                <!-- ── Add Batch Form ── -->
+                <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 class="font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                        Add New Batch
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-5">Register a product batch with manufacturing and expiry dates. All fields are required.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="form-label">Batch Number <span class="text-red-400">*</span></label>
+                            <input id="batch-number" type="text" class="form-input" placeholder="e.g. NES-2024-001" />
+                            <!-- This value is used as the barcode in PB5 -->
+                            <p class="text-[10px] text-slate-400 mt-1">↑ This is the barcode value scanned in PB5</p>
+                        </div>
+                        <div>
+                            <label class="form-label">Product Name <span class="text-red-400">*</span></label>
+                            <input id="batch-product" type="text" class="form-input" placeholder="e.g. Nescafé Gold 200g" />
+                        </div>
+                        <div>
+                            <label class="form-label">Quantity (units) <span class="text-red-400">*</span></label>
+                            <input id="batch-qty" type="number" class="form-input" placeholder="500" min="1" />
+                        </div>
+                        <div>
+                            <label class="form-label">Manufacturing Date <span class="text-red-400">*</span></label>
+                            <input id="batch-mfg" type="date" class="form-input" />
+                        </div>
+                        <div>
+                            <label class="form-label">Expiry Date <span class="text-red-400">*</span></label>
+                            <input id="batch-exp" type="date" class="form-input" />
+                        </div>
+                        <div>
+                            <label class="form-label">Warehouse Location <span class="text-red-400">*</span></label>
+                            <select id="batch-location" class="form-input">
+                                <option value="Colombo-01">Colombo-01</option>
+                                <option value="Galle-02">Galle-02</option>
+                                <option value="Kandy-03">Kandy-03</option>
+                                <option value="Negombo-04">Negombo-04</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="addBatch()" id="add-batch-btn"
+                                    class="w-full py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all"
+                                    style="background: linear-gradient(135deg, var(--nestle-blue), var(--nestle-light-blue));">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                <span id="add-btn-text">Add Batch</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Validation error inline -->
+                    <div id="form-error" class="hidden mt-4 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span id="form-error-msg"></span>
+                    </div>
+                </div>
+
+                <!-- ── Batch List ── -->
+                <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold text-slate-900 text-sm">All Batches</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Real-time from Firestore · sorted by expiry (FEFO order)</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <!-- Search filter -->
+                            <input id="batch-search" type="text" placeholder="Search batch / product…"
+                                   class="text-xs border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-300 w-48"
+                                   oninput="filterTable()" />
+                            <div class="text-xs font-semibold text-slate-400 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200" id="batch-count-label">Loading…</div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Batch #</th>
+                                    <th>Product</th>
+                                    <th>Mfg Date</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days Left</th>
+                                    <th>Qty</th>
+                                    <th>Location</th>
+                                    <th>Shelf Life</th>
+                                    <th>MRSL Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batch-tbody">
+                                <tr>
+                                    <td colspan="10" class="text-center text-slate-400 py-8 text-sm">Loading batches…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+
+            </main>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <!-- ══════════════════════════════════════════
+         FIREBASE — PB2: Batch Master & Expiry Database
+         Acceptance criteria:
+           ✅ System stores batchNumber, mfgDate, expiryDate, quantity, location (string)
+           ✅ All stored data can be retrieved accurately (onSnapshot)
+           ✅ System rejects incomplete or invalid data (client-side validation)
+    ══════════════════════════════════════════ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, addDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { buildSidebar, buildHeader, toast, fmtDate, shelfLifePct, mrslStatus, badgeHtml, shelfBar, setLoading, startClock } from './sidebar.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        };
+        const app  = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db   = getFirestore(app);
+
+        let currentUser = null;
+        let allBatches  = [];
+
+        // ── Auth guard ──
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+            currentUser = user;
+
+            if (!sessionStorage.getItem('user_uid')) {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                const data = snap.exists() ? snap.data() : {};
+                sessionStorage.setItem('user_uid',  user.uid);
+                sessionStorage.setItem('user_name', data.displayName || user.email.split('@')[0]);
+                sessionStorage.setItem('user_role', data.role || 'Warehouse Staff');
+            }
+
+            // ── RBAC: Prevent Retailers from accessing staff portal ──
+            const role = sessionStorage.getItem('user_role') || 'Warehouse Staff';
+            if (role.toLowerCase() === 'retailer') {
+                sessionStorage.setItem('access_denied_msg', 'Access Denied: Internal Staff Only');
+                window.location.href = 'retailer.html';
+                return;
+            }
+
+            // ── RBAC: Prevent Logistics Manager from accessing Batches ──
+            if (role.toLowerCase().includes('logistics')) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            document.getElementById('sidebar-slot').innerHTML = buildSidebar('batches');
+            document.getElementById('header-slot').innerHTML  = buildHeader('Batch Database', 'Manage product batches and expiry dates · PB2');
+            startClock();
+            listenBatches();
+
+            // ── RBAC: Show access-denied toast if redirected from a restricted page ──
+            const deniedMsg = sessionStorage.getItem('access_denied_msg');
+            if (deniedMsg) {
+                sessionStorage.removeItem('access_denied_msg');
+                setTimeout(() => toast(deniedMsg, 'error'), 400);
+            }
+        });
+
+        window.doLogout = async () => {
+            await signOut(auth);
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        };
+
+        // ── Real-time listener ──
+        function listenBatches() {
+            const q = query(collection(db, 'batches'), orderBy('expiryDate', 'asc'));
+            onSnapshot(q, (snap) => {
+                allBatches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderTable(allBatches);
+                document.getElementById('batch-count-label').textContent =
+                    `${allBatches.length} batch${allBatches.length !== 1 ? 'es' : ''}`;
+            }, (err) => {
+                toast('Firestore error: ' + err.message, 'error');
+            });
+        }
+
+        // ── Filter ──
+        window.filterTable = function() {
+            const q = document.getElementById('batch-search').value.toLowerCase();
+            const filtered = q ? allBatches.filter(b =>
+                b.batchNumber.toLowerCase().includes(q) ||
+                b.productName.toLowerCase().includes(q)
+            ) : allBatches;
+            renderTable(filtered);
+        };
+
+        // ── Render table ──
+        function renderTable(batches) {
+            const tbody = document.getElementById('batch-tbody');
+            if (!batches.length) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-slate-400 py-8 text-sm">No batches found. Add your first batch above.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = batches.map(b => {
+                const ms  = mrslStatus(b);
+                const pct = shelfLifePct(b.manufacturingDate, b.expiryDate);
+                return `<tr>
+                    <td><span class="mono text-xs font-medium text-slate-700">${b.batchNumber}</span></td>
+                    <td class="text-sm">${b.productName}</td>
+                    <td class="text-xs text-slate-500">${fmtDate(b.manufacturingDate)}</td>
+                    <td class="text-xs text-slate-500">${fmtDate(b.expiryDate)}</td>
+                    <td class="mono text-xs font-medium ${ms.daysLeft < 30 ? 'text-red-600' : ms.daysLeft < 60 ? 'text-amber-600' : 'text-slate-600'}">
+                        ${ms.daysLeft < 0 ? 'Expired' : ms.daysLeft + 'd'}
+                    </td>
+                    <td class="font-medium text-sm">${b.quantity.toLocaleString()}</td>
+                    <td><span class="text-sm font-medium text-slate-700">${b.location || 'Colombo-01'}</span></td>
+                    <td><div class="flex items-center gap-2">${shelfBar(pct)}<span class="text-xs text-slate-500">${pct}%</span></div></td>
+                    <td>${badgeHtml(ms.label, ms.color)}</td>
+                    <td>
+                        <button onclick="deleteBatch('${b.id}', '${b.batchNumber}')"
+                                class="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">Delete</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ── Add batch (PB2 core) ──
+        window.addBatch = async function() {
+            const batchNumber = document.getElementById('batch-number').value.trim();
+            const productName = document.getElementById('batch-product').value.trim();
+            const qty         = parseInt(document.getElementById('batch-qty').value);
+            const mfgRaw      = document.getElementById('batch-mfg').value;
+            const expRaw      = document.getElementById('batch-exp').value;
+            const location    = document.getElementById('batch-location').value || 'Colombo-01';
+
+            const errEl  = document.getElementById('form-error');
+            const errMsg = document.getElementById('form-error-msg');
+            errEl.classList.add('hidden');
+
+            // PB2 Acceptance: reject incomplete or invalid data
+            if (!batchNumber || !productName || !qty || !mfgRaw || !expRaw) {
+                errMsg.textContent = 'All fields are required. Please fill in all batch details.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            if (isNaN(qty) || qty < 1) {
+                errMsg.textContent = 'Quantity must be a positive number.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            const mfgDate = new Date(mfgRaw);
+            const expDate = new Date(expRaw);
+            if (expDate <= mfgDate) {
+                errMsg.textContent = 'Expiry date must be after manufacturing date.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            // Duplicate batch number check
+            if (allBatches.some(b => b.batchNumber.toLowerCase() === batchNumber.toLowerCase())) {
+                errMsg.textContent = `Batch "${batchNumber}" already exists. Use a unique batch number.`;
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            setLoading('add-batch-btn', true);
+            document.getElementById('add-btn-text').textContent = 'Saving…';
+
+            try {
+                // PB2: Write to Firestore batches collection
+                await addDoc(collection(db, 'batches'), {
+                    batchNumber,
+                    productName,
+                    manufacturingDate: Timestamp.fromDate(mfgDate),
+                    expiryDate:        Timestamp.fromDate(expDate),
+                    quantity:          qty,
+                    location:          location,
+                    createdAt:         serverTimestamp(),
+                    createdBy:         currentUser?.uid || 'demo'
+                });
+
+                // Clear form on success
+                ['batch-number','batch-product','batch-qty','batch-mfg','batch-exp']
+                    .forEach(id => document.getElementById(id).value = '');
+                document.getElementById('batch-location').value = 'Colombo-01';
+
+                toast(`Batch "${batchNumber}" added successfully!`, 'success');
+            } catch (e) {
+                toast('Error saving batch: ' + e.message, 'error');
+            } finally {
+                setLoading('add-batch-btn', false);
+                document.getElementById('add-btn-text').textContent = 'Add Batch';
+            }
+        };
+
+        // ── Delete batch ──
+        window.deleteBatch = async function(id, batchNumber) {
+            if (!confirm(`Delete batch "${batchNumber}"? This cannot be undone.`)) return;
+            try {
+                await deleteDoc(doc(db, 'batches', id));
+                toast(`Batch "${batchNumber}" deleted.`, 'info');
+            } catch (e) {
+                toast('Error deleting batch: ' + e.message, 'error');
+            }
+        };
+    </script>
+</body>
+</html>

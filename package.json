@@ -1,0 +1,13 @@
+{
+  "name": "nestle-ssams-tests",
+  "version": "1.0.0",
+  "description": "Playwright tests for Sprint 2",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.0",
+    "http-server": "^14.1.1"
+  }
+}
