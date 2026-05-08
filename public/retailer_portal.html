@@ -104,11 +104,17 @@
         </div>
 
         <nav class="flex-1 px-4 py-4 space-y-1">
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/15 text-white font-medium transition hover:bg-white/20">
+            <a href="#" id="nav-offers" onclick="showTab('offers')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/15 text-white font-medium transition hover:bg-white/20">
                 <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
                 </svg>
                 Promotion Offers
+            </a>
+            <a href="#" id="nav-live" onclick="showTab('live')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-100 font-medium transition hover:bg-white/10">
+                <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                Live Campaigns
             </a>
             <a href="collaboration.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-100 font-medium transition hover:bg-white/10">
                 <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,21 +141,37 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 relative">
         <main class="flex-1 overflow-y-auto p-8 lg:p-10">
-            <div class="max-w-4xl">
+            <div id="tab-offers" class="max-w-4xl">
                 <h2 class="text-2xl font-bold text-slate-800 mb-2">Promotion Offers</h2>
-                <p class="text-slate-500 mb-8">View and manage your active promotional campaigns.</p>
+                <p class="text-slate-500 mb-8">View and accept promotional offers from Nestlé.</p>
                 <div id="offers-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <!-- Offers will be populated here -->
                 </div>
-
                 <div id="no-offers-msg" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center py-20" style="display:none;">
                     <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-bold text-slate-800 mb-2">No Active Promotions</h3>
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">No Active Offers</h3>
                     <p class="text-sm text-slate-500 max-w-sm">Check back later for new promotional offers and campaigns from the Demand Planner.</p>
+                </div>
+            </div>
+
+            <div id="tab-live" class="max-w-5xl" style="display:none;">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Live Campaigns</h2>
+                <p class="text-slate-500 mb-8">Monitor your currently running promotional batches and sales velocity.</p>
+                <div id="live-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Live campaigns will be populated here -->
+                </div>
+                <div id="no-live-msg" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center py-20" style="display:none;">
+                    <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">No Live Campaigns</h3>
+                    <p class="text-sm text-slate-500 max-w-sm">Accept a promotion offer to start a live campaign.</p>
                 </div>
             </div>
         </main>
@@ -198,7 +220,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
@@ -221,77 +243,167 @@
 
         let currentOffers = {};
 
+        window.showTab = function(tab) {
+            document.getElementById('tab-offers').style.display = tab === 'offers' ? 'block' : 'none';
+            document.getElementById('tab-live').style.display = tab === 'live' ? 'block' : 'none';
+            
+            // Update sidebar UI
+            document.getElementById('nav-offers').classList.toggle('bg-white/15', tab === 'offers');
+            document.getElementById('nav-offers').classList.toggle('text-white', tab === 'offers');
+            document.getElementById('nav-offers').classList.toggle('text-blue-100', tab !== 'offers');
+            
+            document.getElementById('nav-live').classList.toggle('bg-white/15', tab === 'live');
+            document.getElementById('nav-live').classList.toggle('text-white', tab === 'live');
+            document.getElementById('nav-live').classList.toggle('text-blue-100', tab !== 'live');
+        };
+
         onAuthStateChanged(auth, user => {
             if (!user) {
                 window.location.href = 'index.html';
                 return;
             }
 
-            const q = query(collection(db, 'live_campaigns'), where('retailerID', '==', user.uid), where('status', 'in', ['active', 'reserved']));
-            onSnapshot(q, snap => {
-                const container = document.getElementById('offers-container');
+            const q = query(collection(db, 'live_campaigns'), where('retailerID', '==', user.uid));
+            onSnapshot(q, async snap => {
+                const offersContainer = document.getElementById('offers-container');
+                const liveContainer = document.getElementById('live-container');
                 const noOffers = document.getElementById('no-offers-msg');
-                currentOffers = {}; // Clear previous offers
+                const noLive = document.getElementById('no-live-msg');
                 
-                if (snap.empty) {
-                    container.innerHTML = '';
-                    noOffers.style.display = 'flex';
-                } else {
-                    noOffers.style.display = 'none';
-                    container.innerHTML = '';
-                    snap.forEach(d => {
-                        const offer = d.data();
-                        const offerId = d.id;
-                        currentOffers[offerId] = offer;
-                        const discount = offer.discountPercent || 0;
-                        
-                        let daysLeft = 'N/A';
-                        if (offer.endDate) {
-                            const exp = offer.endDate.toDate ? offer.endDate.toDate() : new Date(offer.endDate);
-                            daysLeft = Math.round((exp - new Date()) / (1000 * 60 * 60 * 24));
-                        }
+                offersContainer.innerHTML = '';
+                liveContainer.innerHTML = '';
+                currentOffers = {};
 
-                        const isReserved = offer.status === 'reserved';
-                        const statusBadge = isReserved
-                            ? `<span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200">✓ Reserved</span>`
-                            : `<span class="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full">Active Offer</span>`;
+                let hasOffers = false;
+                let hasLive = false;
 
-                        const actionBtn = isReserved
-                            ? `<div class="mt-auto w-full py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-sm text-center">✓ Stock Reserved</div>`
-                            : `<button onclick="openAcceptModal('${offerId}')" class="mt-auto w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition">Reserve Stock</button>`;
+                for (const d of snap.docs) {
+                    const offer = d.data();
+                    const offerId = d.id;
+                    currentOffers[offerId] = offer;
 
-                        const cardBorder = isReserved ? 'border-emerald-200' : 'border-slate-100';
-
-                        const qty = offer.quantityAvailable || 0;
-                        const card = document.createElement('div');
-                        card.className = `bg-white p-6 rounded-2xl shadow-sm border ${cardBorder} flex flex-col`;
-                        card.innerHTML = `
-                            <div class="mb-4">
-                                <div class="flex justify-between items-start mb-2">
-                                    ${statusBadge}
-                                    <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">${discount}% Off</span>
-                                </div>
-                                <h3 class="text-lg font-bold text-slate-800">${offer.productName || 'N/A'}</h3>
-                                <p class="text-sm text-slate-500 font-mono mt-1">Batch: ${offer.batchNumber || 'N/A'}</p>
-                                <p class="text-sm text-slate-600 font-semibold mt-0.5">${offer.promotionTitle || ''}</p>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 mb-6">
-                                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                    <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Quantity</div>
-                                    <div class="text-base font-bold text-slate-800 font-mono mt-0.5">${qty.toLocaleString()}</div>
-                                </div>
-                                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                    <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">End Date</div>
-                                    <div class="text-base font-bold text-slate-800 font-mono mt-0.5">${offer.endDate || 'N/A'}</div>
-                                </div>
-                            </div>
-                            ${actionBtn}
-                        `;
-                        container.appendChild(card);
-                    });
+                    if (offer.status === 'active') {
+                        hasOffers = true;
+                        renderOfferCard(offer, offerId, offersContainer);
+                    } else if (offer.status === 'reserved') {
+                        hasLive = true;
+                        await renderLiveCard(offer, offerId, liveContainer);
+                    }
                 }
+
+                noOffers.style.display = hasOffers ? 'none' : 'flex';
+                noLive.style.display = hasLive ? 'none' : 'flex';
             });
         });
+
+        function renderOfferCard(offer, id, container) {
+            const discount = offer.discountPercent || 0;
+            const qty = offer.quantityAvailable || 0;
+            
+            const card = document.createElement('div');
+            card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col";
+            card.innerHTML = `
+                <div class="mb-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full uppercase tracking-wider">New Offer</span>
+                        <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">${discount}% Off</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-800">${offer.productName || 'N/A'}</h3>
+                    <p class="text-sm text-slate-500 font-mono mt-1">Batch: ${offer.batchNumber || 'N/A'}</p>
+                    <p class="text-sm text-slate-600 font-semibold mt-0.5">${offer.promotionTitle || ''}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Quantity</div>
+                        <div class="text-base font-bold text-slate-800 font-mono mt-0.5">${qty.toLocaleString()}</div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">End Date</div>
+                        <div class="text-base font-bold text-slate-800 font-mono mt-0.5">${offer.endDate || 'N/A'}</div>
+                    </div>
+                </div>
+                <button onclick="openAcceptModal('${id}')" class="mt-auto w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition">Accept Offer</button>
+            `;
+            container.appendChild(card);
+        }
+
+        async function renderLiveCard(campaign, id, container) {
+            let expiryDate = 'N/A';
+            let totalQty = campaign.quantityAvailable || 0;
+            let batchNumber = campaign.batchNumber || 'N/A';
+
+            // Fetch real-time batch data for expiry and totals
+            if (campaign.batchID) {
+                const batchDoc = await getDoc(doc(db, 'batches', campaign.batchID));
+                if (batchDoc.exists()) {
+                    const bData = batchDoc.data();
+                    expiryDate = bData.expiryDate?.toDate ? bData.expiryDate.toDate() : new Date(bData.expiryDate);
+                    totalQty = bData.quantity || totalQty;
+                    batchNumber = bData.batchNumber || batchNumber;
+                }
+            }
+
+            const now = new Date();
+            const exp = new Date(expiryDate);
+            const daysLeft = expiryDate !== 'N/A' ? Math.ceil((exp - now) / (1000 * 60 * 60 * 24)) : 0;
+            
+            const soldUnits = campaign.soldUnits || 0;
+            const promoQty = campaign.quantityAvailable || 0;
+            const progress = promoQty > 0 ? Math.min(100, Math.round((soldUnits / promoQty) * 100)) : 0;
+
+            const card = document.createElement('div');
+            card.className = "bg-white p-6 rounded-2xl shadow-md border border-emerald-100 relative overflow-hidden flex flex-col";
+            card.innerHTML = `
+                <div class="absolute top-0 right-0 p-4">
+                    <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-100">LIVE</span>
+                </div>
+                
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h3 class="text-xl font-bold text-slate-800">${campaign.productName}</h3>
+                        <span class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded uppercase tracking-tighter">${campaign.discountPercent}% OFF</span>
+                    </div>
+                    <p class="text-sm text-slate-500 font-medium">Batch: <span class="font-mono text-slate-700">${batchNumber}</span></p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-2 flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                            Expiry Warning
+                        </div>
+                        <div class="flex items-end gap-1">
+                            <span class="text-2xl font-bold ${daysLeft < 15 ? 'text-red-500' : 'text-slate-700'}">${daysLeft}</span>
+                            <span class="text-xs font-semibold text-slate-400 mb-1">DAYS LEFT</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-2 flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                            Timeline
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-600">
+                            ${campaign.startDate} <span class="text-slate-300 mx-1">→</span> ${campaign.endDate}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-auto">
+                    <div class="flex justify-between items-end mb-2">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sales Velocity</div>
+                        <div class="text-xs font-bold text-blue-600">${progress}%</div>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="flex justify-between mt-2">
+                        <span class="text-[10px] font-medium text-slate-400">${soldUnits.toLocaleString()} units sold</span>
+                        <span class="text-[10px] font-medium text-slate-400">${promoQty.toLocaleString()} total</span>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        }
 
         window.openAcceptModal = function(id) {
             const offer = currentOffers[id];
