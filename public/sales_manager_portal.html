@@ -284,6 +284,62 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Live Promotions Monitor -->
+                <div>
+                    <div class="section-label">Live Promotions Monitor</div>
+                    <div class="glass-panel">
+                        <div style="padding:18px 24px 16px;border-bottom:1px solid rgba(226,232,240,0.7); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Active & Reserved Campaigns</h3>
+                                <p style="font-size:12px;color:#94a3b8;margin-top:2px;">Real-time tracking of promotional offers sent to retailers.</p>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+                                <div style="display: flex; gap: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+                                        <span style="font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase;">Active</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #0057B8;"></span>
+                                        <span style="font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase;">Reserved</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="promo-search" placeholder="Search product or title..." style="font-size: 11px; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; width: 180px; outline: none; transition: border-color 0.2s;" onkeyup="renderPromotionsTable()" />
+                                    <select id="promo-status-filter" style="font-size: 11px; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; outline: none;" onchange="renderPromotionsTable()">
+                                        <option value="all">All Status</option>
+                                        <option value="active">Active</option>
+                                        <option value="reserved">Reserved</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Promotion Title</th>
+                                        <th>Retailer</th>
+                                        <th>Product</th>
+                                        <th>Qty</th>
+                                        <th>Discount</th>
+                                        <th>Status</th>
+                                        <th>Timeline</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="promotions-monitor-tbody">
+                                    <tr>
+                                        <td colspan="7" style="text-align:center;padding:40px 18px;color:#94a3b8;font-size:14px;">
+                                            No active promotions found.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
@@ -370,6 +426,7 @@
         const db = getFirestore(app);
 
         let escalatedBatches = [];
+        let livePromotions = [];
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'index.html'; return; }
@@ -380,7 +437,7 @@
             // Allow access if they are manager or supervisor, but for a real app, you might restrict this strictly to Sales Manager or Demand Planner
             if (roleLower === 'retailer') {
                 sessionStorage.setItem('access_denied_msg', 'Access Denied: Managers Only');
-                window.location.href = 'retailer.html';
+                window.location.href = 'retailer_portal.html';
                 return;
             }
 
@@ -391,7 +448,11 @@
             
             loadRetailers();
             listenForEscalatedBatches();
+            listenForPromotions();
         });
+
+        // ── Cache for retailers ──
+        let retailerMap = {};
 
         // ── Load Retailers ──
         async function loadRetailers() {
@@ -399,9 +460,11 @@
             try {
                 const snap = await getDocs(collection(db, 'users'));
                 const retailers = [];
+                retailerMap = {};
                 snap.forEach(d => {
                     if (d.data().role === 'Retailer') {
                         retailers.push({id: d.id, ...d.data()});
+                        retailerMap[d.id] = d.data().displayName || d.data().email || d.id;
                     }
                 });
                 if (retailers.length === 0) {
@@ -546,6 +609,100 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Trigger Promotion';
+            }
+        };
+
+        // ── Listen for Promotions Monitor ──
+        function listenForPromotions() {
+            const q = query(collection(db, 'live_campaigns'), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                livePromotions = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    livePromotions.push({ id: docSnap.id, ...data });
+                });
+                renderPromotionsTable();
+            }, (error) => {
+                console.error("Error listening for promotions:", error);
+                const tbody = document.getElementById('promotions-monitor-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:#dc2626;font-size:14px;">
+                        <svg style="width:20px;height:20px;display:inline-block;vertical-align:middle;margin-right:8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        Failed to sync promotions monitor. Check permissions.
+                    </td></tr>`;
+                }
+            });
+        }
+
+        window.renderPromotionsTable = function() {
+            const tbody = document.getElementById('promotions-monitor-tbody');
+            const searchInput = document.getElementById('promo-search');
+            const statusFilterInput = document.getElementById('promo-status-filter');
+            
+            if (!tbody || !searchInput || !statusFilterInput) return;
+
+            const search = searchInput.value.toLowerCase();
+            const statusFilter = statusFilterInput.value;
+
+            const filtered = livePromotions.filter(p => {
+                const prodName = (p.productName || '').toLowerCase();
+                const promoTitle = (p.promotionTitle || '').toLowerCase();
+                const matchesSearch = prodName.includes(search) || promoTitle.includes(search);
+                const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+                return matchesSearch && matchesStatus;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px 18px;color:#94a3b8;font-size:14px;">No matching promotions found.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(promo => {
+                const retailerName = retailerMap[promo.retailerID] || promo.retailerID || 'Unknown Retailer';
+                const isReserved = promo.status === 'reserved';
+                const status = promo.status || 'unknown';
+                
+                html += `
+                    <tr>
+                        <td style="font-weight:700; color:#1e293b;">${promo.promotionTitle || 'Untitled Promo'}</td>
+                        <td style="font-size:12px; font-weight:500;">${retailerName}</td>
+                        <td>${promo.productName || 'N/A'}</td>
+                        <td class="qty-mono">${(promo.quantityAvailable || 0).toLocaleString()}</td>
+                        <td style="color:#059669; font-weight:700;">${promo.discountPercent || 0}%</td>
+                        <td>
+                            <span style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:800; text-transform:uppercase; 
+                                ${isReserved ? 'background:#eff6ff; color:#1d4ed8; border:1px solid #dbeafe;' : 'background:#ecfdf5; color:#047857; border:1px solid #d1fae5;'}">
+                                <span style="width:6px; height:6px; border-radius:50%; ${isReserved ? 'background:#1d4ed8;' : 'background:#059669;'}"></span>
+                                ${status}
+                            </span>
+                        </td>
+                        <td style="font-size:11px; color:#64748b; font-weight:500;">
+                            ${promo.startDate || '--'} to ${promo.endDate || '--'}
+                        </td>
+                        <td>
+                            <button onclick="endPromotion('${promo.id}', '${promo.batchID}')" style="padding:6px 10px; border-radius:8px; border:1px solid #fee2e2; background:#fef2f2; color:#b91c1c; font-size:10px; font-weight:700; cursor:pointer; transition:all 0.2s;">
+                                End Campaign
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        };
+
+        window.endPromotion = async function(promoId, batchId) {
+            if (!confirm('Are you sure you want to end this campaign? The batch will return to standard inventory.')) return;
+            
+            try {
+                await updateDoc(doc(db, 'live_campaigns', promoId), { status: 'ended' });
+                if (batchId && batchId !== 'undefined') {
+                    await updateDoc(doc(db, 'batches', batchId), { status: 'standard' });
+                }
+                toast('Campaign ended successfully.', 'success');
+            } catch (err) {
+                console.error("Error ending campaign:", err);
+                toast('Failed to end campaign.', 'error');
             }
         };
 

@@ -412,6 +412,8 @@
                     role = 'Logistics Manager';
                 } else if (email.toLowerCase().includes('salesmanager')) {
                     role = 'Sales Manager';
+                } else if (email.toLowerCase().includes('retailer')) {
+                    role = 'Retailer';
                 }
 
                 const userData = snap.exists()

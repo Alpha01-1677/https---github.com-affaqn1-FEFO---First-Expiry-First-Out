@@ -408,24 +408,38 @@ export function fmtDate(ts) {
 }
 
 export function shelfLifePct(mfgTs, expTs) {
-    const mfg = mfgTs.toDate ? mfgTs.toDate() : new Date(mfgTs);
-    const exp = expTs.toDate ? expTs.toDate() : new Date(expTs);
-    const total = daysBetween(mfg, exp);
-    if (total <= 0) return 0;
-    const remaining = daysBetween(new Date(), exp);
-    return Math.max(0, Math.round((remaining / total) * 100));
+    if (!mfgTs || !expTs) return 0;
+    try {
+        const mfg = mfgTs.toDate ? mfgTs.toDate() : new Date(mfgTs);
+        const exp = expTs.toDate ? expTs.toDate() : new Date(expTs);
+        const total = daysBetween(mfg, exp);
+        if (total <= 0) return 0;
+        const remaining = daysBetween(new Date(), exp);
+        return Math.max(0, Math.round((remaining / total) * 100));
+    } catch (e) {
+        console.warn('Error calculating shelf life pct:', e);
+        return 0;
+    }
 }
 
 export function mrslStatus(batch, mrslDays = 30) {
-    const exp = batch.expiryDate.toDate ? batch.expiryDate.toDate() : new Date(batch.expiryDate);
-    const daysLeft = daysBetween(new Date(), exp);
-    const pct = shelfLifePct(batch.manufacturingDate, batch.expiryDate);
-    if (daysLeft < 0) return { ok: false, label: 'Expired', color: 'red', daysLeft, pct };
-    if (!(daysLeft > mrslDays && pct >= 20))
-        return { ok: false, label: 'MRSL Fail', color: 'red', daysLeft, pct };
-    if (daysLeft <= mrslDays * 1.5 || pct < 35)
-        return { ok: true, label: 'Near Limit', color: 'yellow', daysLeft, pct };
-    return { ok: true, label: 'Compliant', color: 'green', daysLeft, pct };
+    if (!batch || !batch.expiryDate) {
+        return { ok: false, label: 'No Data', color: 'gray', daysLeft: 0, pct: 0 };
+    }
+    try {
+        const exp = batch.expiryDate.toDate ? batch.expiryDate.toDate() : new Date(batch.expiryDate);
+        const daysLeft = daysBetween(new Date(), exp);
+        const pct = shelfLifePct(batch.manufacturingDate, batch.expiryDate);
+        if (daysLeft < 0) return { ok: false, label: 'Expired', color: 'red', daysLeft, pct };
+        if (!(daysLeft > mrslDays && pct >= 20))
+            return { ok: false, label: 'MRSL Fail', color: 'red', daysLeft, pct };
+        if (daysLeft <= mrslDays * 1.5 || pct < 35)
+            return { ok: true, label: 'Near Limit', color: 'yellow', daysLeft, pct };
+        return { ok: true, label: 'Compliant', color: 'green', daysLeft, pct };
+    } catch (e) {
+        console.warn('Error calculating MRSL status:', e);
+        return { ok: false, label: 'Error', color: 'red', daysLeft: 0, pct: 0 };
+    }
 }
 
 export function badgeHtml(label, color) {

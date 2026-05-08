@@ -1427,6 +1427,7 @@
 
             const now = new Date();
             batches.forEach(b => {
+                if (!b.expiryDate) return;
                 const exp = b.expiryDate.toDate ? b.expiryDate.toDate() : new Date(b.expiryDate);
                 const daysLeft = Math.round((exp - now) / (1000 * 60 * 60 * 24));
 
