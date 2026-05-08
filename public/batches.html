@@ -179,8 +179,8 @@
                 return;
             }
 
-            // ── RBAC: Prevent Logistics Manager from accessing Batches ──
-            if (role.toLowerCase().includes('logistics')) {
+            // ── RBAC: Prevent Logistics Manager and Sales Manager from accessing Batches ──
+            if (role.toLowerCase().includes('logistics') || role.toLowerCase().includes('sales manager') || role.toLowerCase().includes('salesmanager')) {
                 window.location.href = 'dashboard.html';
                 return;
             }

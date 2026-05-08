@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestlé SSAMS — Sales Manager Portal</title>
+    <meta name="description" content="Sales Manager Portal for reviewing escalated batches and standardizing promotions." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        /* ── Core Styles matching Dashboard ── */
+        body {
+            background: #f0f4f8;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .hero-banner {
+            position: relative;
+            background: linear-gradient(135deg, #001a4d 0%, #003087 40%, #0057B8 70%, #00AEEF 100%);
+            border-radius: 24px;
+            overflow: hidden;
+            padding: 32px 36px;
+            color: #fff;
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            left: -10%;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, rgba(0, 174, 239, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            right: 5%;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Glass containers */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 48, 135, 0.07);
+        }
+
+        /* Section label */
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #94a3b8;
+            margin-bottom: 14px;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 14px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            background: rgba(248, 250, 252, 0.6);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .data-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            color: #334155;
+            vertical-align: middle;
+        }
+        .data-table tbody tr {
+            transition: background 0.2s;
+        }
+        .data-table tbody tr:hover {
+            background: rgba(248, 250, 252, 0.8);
+        }
+
+        .batch-num {
+            font-family: 'DM Mono', monospace;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1e40af;
+            background: rgba(219, 234, 254, 0.7);
+            border: 1px solid rgba(147, 197, 253, 0.5);
+            padding: 3px 9px;
+            border-radius: 7px;
+            letter-spacing: 0.02em;
+        }
+
+        .qty-mono {
+            font-family: 'DM Mono', monospace;
+            font-weight: 500;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        /* Button styles */
+        .btn-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: linear-gradient(135deg, #00AEEF, #0057B8);
+            color: #fff;
+            box-shadow: 0 3px 10px rgba(0, 174, 239, 0.25);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.02em;
+        }
+
+        .btn-trigger:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0, 174, 239, 0.35);
+        }
+
+        .btn-trigger:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 9000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+            padding: 32px;
+            width: 100%;
+            max-width: 500px;
+            transform: translateY(12px) scale(0.97);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.open .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 16px;
+        }
+
+        .form-field label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .form-field input, .form-field select {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 13.5px;
+            color: #0f172a;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .form-field input:focus, .form-field select:focus {
+            border-color: #0057B8;
+        }
+        
+        .form-field input[readonly] {
+            background-color: #f8fafc;
+            color: #64748b;
+            border-color: #cbd5e1;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- App Shell -->
+    <div id="app-shell" class="flex h-screen overflow-hidden">
+        <div id="sidebar-slot"></div>
+
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div id="header-slot"></div>
+
+            <main class="flex-1 overflow-y-auto" style="padding:24px 28px;display:flex;flex-direction:column;gap:24px;">
+                <!-- Hero Banner -->
+                <div class="hero-banner shadow-2xl">
+                    <div style="position:relative;z-index:1;">
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:rgba(255,255,255,0.85);margin-bottom:12px;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#00AEEF;display:inline-block;box-shadow:0 0 6px rgba(0,174,239,0.8);"></span>
+                            Sales Manager View
+                        </div>
+                        <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;margin-bottom:8px;">
+                            Promotion Management Portal
+                        </h1>
+                        <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">
+                            PB10 · Review escalated batches and standardize promotional discounts for retail partners.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Review Queue Table -->
+                <div>
+                    <div class="section-label">Financial Review Queue</div>
+                    <div class="glass-panel">
+                        <div style="padding:18px 24px 16px;border-bottom:1px solid rgba(226,232,240,0.7);">
+                            <h3 style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Escalated Batches</h3>
+                            <p style="font-size:12px;color:#94a3b8;margin-top:2px;">Batches flagged by Demand Planners requiring promotional action.</p>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Batch #</th>
+                                        <th>Product (SKU)</th>
+                                        <th>Days Left</th>
+                                        <th>Quantity</th>
+                                        <th>Escalated On</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="escalated-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align:center;padding:40px 18px;color:#94a3b8;font-size:14px;">
+                                            <svg style="width:18px;height:18px;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            Loading escalated batches…
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
+    <!-- Promotion Modal -->
+    <div class="modal-overlay" id="promo-modal-overlay" onclick="closePromotionModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Trigger Promotion</h2>
+                    <p style="font-size:12px;color:#94a3b8;margin-top:4px;">Define standard terms and push to live campaigns.</p>
+                </div>
+                <button onclick="closePromotionModal()" style="border:none;background:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:20px;line-height:1;">×</button>
+            </div>
+
+            <form id="promo-form" onsubmit="submitPromotion(event)">
+                <input type="hidden" id="promo-batch-id" />
+                <input type="hidden" id="promo-batch-qty" />
+                <input type="hidden" id="promo-batch-sku" />
+                <input type="hidden" id="promo-batch-num" />
+                
+                <div class="form-field">
+                    <label>Selected Batch</label>
+                    <input id="promo-batch-display" type="text" readonly />
+                </div>
+
+                <div class="form-field">
+                    <label>Select Retailer</label>
+                    <select id="promo-retailer-id" required>
+                        <option value="">Loading retailers...</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Promotion Title</label>
+                    <input id="promo-title" type="text" placeholder="e.g., Weekend Clearance Sale" required />
+                </div>
+                
+                <div class="form-field">
+                    <label>Discount (%)</label>
+                    <input id="promo-discount" type="number" placeholder="e.g., 30" min="1" max="100" required />
+                </div>
+
+                <div style="display:flex;gap:10px;">
+                    <div class="form-field" style="flex:1;">
+                        <label>Start Date</label>
+                        <input id="promo-start" type="date" required />
+                    </div>
+                    <div class="form-field" style="flex:1;">
+                        <label>End Date</label>
+                        <input id="promo-end" type="date" required />
+                    </div>
+                </div>
+
+                <div style="margin-top:24px;">
+                    <button type="submit" id="btn-submit-promo" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#0057B8,#003087);color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,48,135,0.25);transition:all 0.2s ease;">
+                        Trigger Promotion
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, where, orderBy, onSnapshot, getDocs, doc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { buildSidebar, buildHeader, toast, fmtDate, startClock } from './sidebar.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let escalatedBatches = [];
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+
+            const role = sessionStorage.getItem('user_role') || '';
+            const roleLower = role.toLowerCase();
+            
+            // Allow access if they are manager or supervisor, but for a real app, you might restrict this strictly to Sales Manager or Demand Planner
+            if (roleLower === 'retailer') {
+                sessionStorage.setItem('access_denied_msg', 'Access Denied: Managers Only');
+                window.location.href = 'retailer.html';
+                return;
+            }
+
+            // Inject layout
+            document.getElementById('sidebar-slot').innerHTML = buildSidebar('sales_manager_portal');
+            document.getElementById('header-slot').innerHTML = buildHeader('Sales Manager Portal', 'Standardized Promotion Management');
+            startClock();
+            
+            loadRetailers();
+            listenForEscalatedBatches();
+        });
+
+        // ── Load Retailers ──
+        async function loadRetailers() {
+            const select = document.getElementById('promo-retailer-id');
+            try {
+                const snap = await getDocs(collection(db, 'users'));
+                const retailers = [];
+                snap.forEach(d => {
+                    if (d.data().role === 'Retailer') {
+                        retailers.push({id: d.id, ...d.data()});
+                    }
+                });
+                if (retailers.length === 0) {
+                    select.innerHTML = '<option value="">No retailers found</option>';
+                } else {
+                    select.innerHTML = '<option value="">Select a retail partner...</option>' + 
+                        retailers.map(r => `<option value="${r.id}">${r.displayName || r.email || r.id}</option>`).join('');
+                }
+            } catch (e) {
+                console.error("Error fetching retailers", e);
+                select.innerHTML = '<option value="">Error loading retailers</option>';
+            }
+        }
+
+        // ── Listen for Escalated Batches ──
+        function listenForEscalatedBatches() {
+            const q = query(collection(db, 'batches'), where("status", "==", "escalated"));
+            onSnapshot(q, (snapshot) => {
+                escalatedBatches = [];
+                snapshot.forEach(docSnap => {
+                    escalatedBatches.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                renderEscalatedTable();
+            }, (error) => {
+                console.error("Error fetching escalated batches:", error);
+                document.getElementById('escalated-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#dc2626;">Failed to load data.</td></tr>`;
+            });
+        }
+
+        function renderEscalatedTable() {
+            const tbody = document.getElementById('escalated-tbody');
+            if (escalatedBatches.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 18px;font-size:13.5px;color:#94a3b8;">No escalated batches in the queue.</td></tr>`;
+                return;
+            }
+
+            // Sort by earliest expiry or escalation date
+            escalatedBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+            let html = '';
+            escalatedBatches.forEach(batch => {
+                const daysLeft = Math.ceil((new Date(batch.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+                const escDate = batch.escalatedAt ? fmtDate(batch.escalatedAt.toDate ? batch.escalatedAt.toDate().toISOString() : batch.escalatedAt) : 'Unknown';
+                
+                html += `
+                    <tr>
+                        <td><span class="batch-num">${batch.batchNumber}</span></td>
+                        <td style="font-weight:600;">${batch.productName}</td>
+                        <td style="color:${daysLeft <= 30 ? '#dc2626' : (daysLeft <= 60 ? '#d97706' : '#16a34a')};font-weight:700;">
+                            ${daysLeft} days
+                        </td>
+                        <td><span class="qty-mono">${batch.quantity.toLocaleString()}</span></td>
+                        <td style="color:#64748b;font-size:12px;">${escDate}</td>
+                        <td>
+                            <button class="btn-trigger" onclick="openPromotionModal('${batch.id}')">
+                                <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                Trigger Promo
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // ── Promotion Modal Flow ──
+        window.openPromotionModal = function(batchId) {
+            const batch = escalatedBatches.find(b => b.id === batchId);
+            if (!batch) return;
+
+            document.getElementById('promo-batch-id').value = batch.id;
+            document.getElementById('promo-batch-qty').value = batch.quantity;
+            document.getElementById('promo-batch-sku').value = batch.productName;
+            document.getElementById('promo-batch-num').value = batch.batchNumber;
+
+            const daysLeft = Math.ceil((new Date(batch.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+            document.getElementById('promo-batch-display').value = `${batch.productName} (Batch: ${batch.batchNumber}) - ${daysLeft} days left`;
+            
+            // Reset fields
+            document.getElementById('promo-title').value = '';
+            document.getElementById('promo-discount').value = '';
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('promo-start').value = today;
+            
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            document.getElementById('promo-end').value = nextWeek.toISOString().split('T')[0];
+
+            document.getElementById('promo-modal-overlay').classList.add('open');
+        };
+
+        window.closePromotionModal = function(evt) {
+            if (evt && evt.target !== document.getElementById('promo-modal-overlay')) return;
+            document.getElementById('promo-modal-overlay').classList.remove('open');
+        };
+
+        window.submitPromotion = async function(evt) {
+            evt.preventDefault();
+            const btn = document.getElementById('btn-submit-promo');
+            btn.disabled = true;
+            btn.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block;">⌛</span> Processing...';
+
+            const batchId = document.getElementById('promo-batch-id').value;
+            const retailerId = document.getElementById('promo-retailer-id').value;
+            const title = document.getElementById('promo-title').value;
+            const discount = document.getElementById('promo-discount').value;
+            const start = document.getElementById('promo-start').value;
+            const end = document.getElementById('promo-end').value;
+            const qty = parseInt(document.getElementById('promo-batch-qty').value, 10);
+            const sku = document.getElementById('promo-batch-sku').value;
+            const batchNum = document.getElementById('promo-batch-num').value;
+
+            try {
+                // 1. Create the locked promotion record in live_campaigns
+                await addDoc(collection(db, 'live_campaigns'), {
+                    batchID: batchId,
+                    batchNumber: batchNum,
+                    productName: sku,
+                    quantityAvailable: qty,
+                    retailerID: retailerId,
+                    promotionTitle: title,
+                    discountPercent: Number(discount),
+                    startDate: start,
+                    endDate: end,
+                    status: 'active',
+                    soldUnits: 0,
+                    createdBy: sessionStorage.getItem('user_uid'),
+                    createdAt: serverTimestamp()
+                });
+
+                // 2. Update the batch status
+                await updateDoc(doc(db, 'batches', batchId), {
+                    status: 'on_promotion'
+                });
+
+                toast('Promotion successfully triggered and locked.', 'success');
+                closePromotionModal();
+            } catch (err) {
+                console.error("Error submitting promotion:", err);
+                toast('Failed to trigger promotion.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Trigger Promotion';
+            }
+        };
+
+    </script>
+</body>
+</html>

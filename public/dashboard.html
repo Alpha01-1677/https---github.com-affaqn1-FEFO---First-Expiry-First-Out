@@ -663,16 +663,14 @@
                             </div>
                             <h1
                                 style="font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;margin-bottom:8px;">
-                                Sprint 1 — Warehouse Dispatch Compliance</h1>
-                            <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">PB1 Auth &nbsp;·&nbsp; PB2
-                                Batches &nbsp;·&nbsp; PB3 Retailer Orders &nbsp;·&nbsp; PB4 Request Mgmt &nbsp;·&nbsp;
-                                PB5 Barcode &nbsp;·&nbsp; PB6 FEFO Dispatch</p>
+                                Sprint 2 — Inventory Aging Monitoring &amp; Retailer Collaboration</h1>
+                            <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">PB5 Aging Dashboard &nbsp;·&nbsp; PB6 Bucket Classification &nbsp;·&nbsp; PB7 Expiry Risk Mgmt &nbsp;·&nbsp; PB8 Warehouse Risk View &nbsp;·&nbsp; PB9 Retailer Portal &nbsp;·&nbsp; PB10 Promotion Mgmt &nbsp;·&nbsp; PB11 B2B Collaboration</p>
                         </div>
                         <div style="text-align:center;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:16px 28px;backdrop-filter:blur(8px);"
                             class="hidden md:block">
                             <div
                                 style="font-size:42px;font-weight:800;letter-spacing:-0.04em;line-height:1;font-family:'DM Mono',monospace;">
-                                6</div>
+                                7</div>
                             <div
                                 style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;opacity:0.7;margin-top:6px;">
                                 Backlog Items</div>
@@ -962,6 +960,33 @@
                     </div>
                 </div>
 
+                 <!-- ── PB8: Warehouse Risk Status Table ── -->
+                 <div class="table-glass" style="margin-top:14px;overflow:hidden;">
+                     <div style="padding:14px 20px 12px;border-bottom:1px solid rgba(226,232,240,0.7);display:flex;align-items:center;justify-content:space-between;">
+                         <div>
+                             <h3 style="font-size:14px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Warehouse Risk Status — PB8</h3>
+                             <p style="font-size:11.5px;color:#94a3b8;margin-top:2px;">District-level aging bucket breakdown · Real-time</p>
+                         </div>
+                     </div>
+                     <div style="overflow-x:auto;">
+                         <table class="data-table" id="warehouse-risk-table">
+                             <thead>
+                                 <tr>
+                                     <th>Warehouse</th>
+                                     <th>Risk Level</th>
+                                     <th style="color:#dc2626;">🔴 Critical (0–30d)</th>
+                                     <th style="color:#d97706;">🟡 Warning (31–60d)</th>
+                                     <th style="color:#16a34a;">🟢 Stable (60+d)</th>
+                                     <th>Total Units</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="warehouse-risk-tbody">
+                                 <tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">Loading warehouse data…</td></tr>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+
                 <!-- ── Batch Overview mini-table ── -->
                 <div>
                     <div class="section-label">Batch Overview</div>
@@ -1171,6 +1196,66 @@
         </div>
     </div>
 
+    <!-- ── Trigger Promotion Modal ── -->
+    <div class="ej-modal-overlay" id="promo-modal-overlay" onclick="closePromotionModal(event)">
+        <div class="ej-modal" onclick="event.stopPropagation()" style="max-width: 500px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Trigger Promotion</h2>
+                    <p style="font-size:12px;color:#94a3b8;margin-top:4px;">Generate and send promotional offers for critical batches to retailers.</p>
+                </div>
+                <button onclick="closePromotionModal()" style="border:none;background:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:20px;line-height:1;">×</button>
+            </div>
+
+            <div class="ej-field">
+                <label>Selected Batch</label>
+                <input id="promo-batch-info" type="text" readonly style="background-color:#f8fafc;" />
+                <input id="promo-batch-id" type="hidden" />
+            </div>
+
+            <div class="ej-field">
+                <label>Select Retailer</label>
+                <select id="promo-retailer-id" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;">
+                    <option value="">Loading retailers...</option>
+                </select>
+            </div>
+
+            <div class="ej-field">
+                <label>Promotional Title</label>
+                <input id="promo-title" type="text" placeholder="e.g., Weekend Clearance Sale" />
+            </div>
+            
+            <div class="ej-field">
+                <label>Offered Discount (%)</label>
+                <input id="promo-offered-discount" type="number" placeholder="e.g., 30" min="0" max="100" />
+            </div>
+
+            <div style="display:flex;gap:10px;">
+                <div class="ej-field" style="flex:1;">
+                    <label>Start Date</label>
+                    <input id="promo-start" type="date" />
+                </div>
+                <div class="ej-field" style="flex:1;">
+                    <label>End Date</label>
+                    <input id="promo-end" type="date" />
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <button onclick="generatePromotionEmail()" style="padding:8px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#003087;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s ease;">✨ Generate Promotional Email</button>
+            </div>
+
+            <div class="ej-field">
+                <label>Email Body</label>
+                <textarea id="promo-email-body" rows="6" placeholder="Click generate to create an email..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button id="btn-send-promo" onclick="sendPromotionEmail()" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.25);transition:all 0.2s ease;" disabled>Send to Retailers</button>
+            </div>
+        </div>
+    </div>
+
     <style>
         @keyframes spin {
             from {
@@ -1233,7 +1318,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot, getDocs, getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { buildSidebar, buildHeader, toast, fmtDate, shelfLifePct, mrslStatus, badgeHtml, shelfBar, startClock } from './sidebar.js';
 
         const firebaseConfig = {
@@ -1270,13 +1355,14 @@
                 return;
             }
 
-            // ── RBAC: Supervisor, Demand Planner, or Logistics Manager ──
+            // ── RBAC: Supervisor, Demand Planner, Logistics Manager, or Sales Manager ──
             const roleLower = role.toLowerCase();
             const isSupervisor = roleLower.includes('supervisor');
             const isDemandPlanner = roleLower.includes('demand planner') || roleLower.includes('demandplanner');
             const isLogisticsManager = roleLower.includes('logistics');
+            const isSalesManager = roleLower.includes('sales manager') || roleLower.includes('salesmanager');
             
-            if (!isSupervisor && !isDemandPlanner && !isLogisticsManager) {
+            if (!isSupervisor && !isDemandPlanner && !isLogisticsManager && !isSalesManager) {
                 sessionStorage.setItem('access_denied_msg', 'Access Denied: Managers Only');
                 window.location.href = 'batches.html';
                 return;
@@ -1426,12 +1512,47 @@
                 const daysColor = b._daysLeft <= 7 ? '#dc2626' : b._daysLeft <= 15 ? '#ea580c' : '#d97706';
                 const daysLabel = b._daysLeft <= 0 ? 'EXPIRED' : `${b._daysLeft}d`;
 
+                const isEscalated = b.status === 'escalated';
+                const isPromoted = b.status === 'on_promotion';
+                
+                let escalateBtn;
+                if (isPromoted) {
+                    escalateBtn = `<button class="btn-action" style="width:100%;justify-content:center;background:#f0fdf4;color:#15803d;border-color:#dcfce7;cursor:not-allowed;" disabled>
+                                       <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                       On Promotion
+                                     </button>`;
+                } else if (isEscalated) {
+                    escalateBtn = `<button class="btn-action" style="width:100%;justify-content:center;background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;cursor:not-allowed;" disabled>
+                                       <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                       Escalated
+                                     </button>`;
+                } else {
+                    escalateBtn = `<button class="btn-action" style="width:100%;justify-content:center;background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;" onclick="escalateBatch('${b.id}', this)">
+                                       <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                                       Escalate to Sales Manager
+                                     </button>`;
+                }
+
                 const actionBtn = isActioned
                     ? `<span class="actioned-badge"><svg style="width:12px;height:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>Actioned</span>`
-                    : `<button class="btn-action btn-action-mark" onclick="markAsActioned('${b.id}', this)">
-                         <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                         Mark Actioned
-                       </button>`;
+                    : `<div style="display:flex;gap:6px;flex-direction:column;align-items:flex-start;">
+                         <button class="btn-action btn-action-mark" onclick="markAsActioned('${b.id}', this)" style="width:100%;justify-content:center;">
+                           <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                           Mark Actioned
+                         </button>
+                         ${escalateBtn}
+                       </div>`;
+
+                let badgeMarkup;
+                if (isPromoted) {
+                    badgeMarkup = badgeHtml('Promoted', 'blue');
+                } else if (isEscalated) {
+                    badgeMarkup = badgeHtml('Escalated', 'yellow');
+                } else if (isActioned) {
+                    badgeMarkup = badgeHtml('Actioned', 'gray');
+                } else {
+                    badgeMarkup = badgeHtml('Critical', 'red');
+                }
 
                 return `<tr class="${rowClass}" data-id="${b.id}">
                     <td><span class="batch-num">${b.batchNumber}</span></td>
@@ -1439,7 +1560,7 @@
                     <td style="font-size:13px;font-weight:500;color:#475569;font-family:'DM Mono',monospace;">${fmtDate(b.expiryDate)}</td>
                     <td><span style="font-size:13px;font-weight:700;color:${daysColor};font-family:'DM Mono',monospace;">${daysLabel}</span></td>
                     <td><span class="qty-mono">${b.quantity.toLocaleString()}</span></td>
-                    <td>${badgeHtml(isActioned ? 'Actioned' : 'Critical', isActioned ? 'gray' : 'red')}</td>
+                    <td>${badgeMarkup}</td>
                     <td>${actionBtn}</td>
                 </tr>`;
             }).join('');
@@ -1452,6 +1573,29 @@
             if (!panel) return;
             panel.classList.toggle('expanded');
             if (btn) btn.classList.toggle('open');
+        };
+
+        // ── Escalate Batch to Sales Manager ──
+        window.escalateBatch = async function(batchId, btnEl) {
+            if (!batchId) return;
+            try {
+                if (btnEl) {
+                    btnEl.disabled = true;
+                    btnEl.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block;">⏳</span> Escalating…';
+                }
+                await updateDoc(doc(db, 'batches', batchId), { 
+                    status: 'escalated',
+                    escalatedAt: serverTimestamp()
+                });
+                toast(`Batch ${batchId} has been escalated to the Sales Manager for promotion review.`, 'success');
+            } catch (err) {
+                console.error('Failed to escalate batch:', err);
+                toast('Failed to escalate batch — check permissions', 'error');
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = 'Escalate to Sales Manager';
+                }
+            }
         };
 
         // ── PB7: Mark batch as actioned in Firestore ──
@@ -1710,6 +1854,64 @@
 
                 mapMarkersLayer.addLayer(marker);
             }
+
+            // ── PB8: Render warehouse risk status table ──
+            renderWarehouseRiskTable(whData);
+        }
+
+        function renderWarehouseRiskTable(whData) {
+            const tbody = document.getElementById('warehouse-risk-tbody');
+            if (!tbody) return;
+
+            const allWarehouses = ['Colombo-01', 'Galle-02', 'Kandy-03', 'Negombo-04'];
+            const rows = allWarehouses.map(wh => {
+                const data = whData[wh];
+                const critBatches = criticalBucket.filter(b => (b.location || 'Colombo-01') === wh).length;
+                const warnBatches = warningBucket.filter(b => (b.location || 'Colombo-01') === wh).length;
+                const stabBatches = stableBucket.filter(b => (b.location || 'Colombo-01') === wh).length;
+
+                if (!data || data.total === 0) {
+                    return `<tr>
+                        <td style="font-weight:600;color:#0f172a;">${wh}</td>
+                        <td><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;">No Data</span></td>
+                        <td style="font-family:'DM Mono',monospace;text-align:center;color:#94a3b8;">—</td>
+                        <td style="font-family:'DM Mono',monospace;text-align:center;color:#94a3b8;">—</td>
+                        <td style="font-family:'DM Mono',monospace;text-align:center;color:#94a3b8;">—</td>
+                        <td style="font-family:'DM Mono',monospace;color:#94a3b8;">—</td>
+                    </tr>`;
+                }
+
+                const { valA, valB, valC, total } = data;
+                let riskLabel, riskBg, riskColor, riskBorder;
+                if (valA / total > 0.15) {
+                    riskLabel = '🔴 Critical Risk'; riskBg = 'rgba(254,226,226,0.7)'; riskColor = '#dc2626'; riskBorder = 'rgba(239,68,68,0.3)';
+                } else if ((valA + valB) / total > 0.40) {
+                    riskLabel = '🟡 Warning Zone'; riskBg = 'rgba(254,243,199,0.7)'; riskColor = '#d97706'; riskBorder = 'rgba(245,158,11,0.3)';
+                } else {
+                    riskLabel = '🟢 Stable'; riskBg = 'rgba(220,252,231,0.7)'; riskColor = '#16a34a'; riskBorder = 'rgba(34,197,94,0.3)';
+                }
+
+                return `<tr>
+                    <td style="font-weight:700;color:#0f172a;">${wh}</td>
+                    <td>
+                        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;background:${riskBg};color:${riskColor};border:1px solid ${riskBorder};display:inline-flex;align-items:center;gap:4px;">
+                            ${riskLabel}
+                        </span>
+                    </td>
+                    <td style="text-align:center;">
+                        <span style="font-family:'DM Mono',monospace;font-weight:700;color:#dc2626;">${critBatches} <span style="font-weight:400;font-size:11px;color:#94a3b8;">batches</span></span>
+                    </td>
+                    <td style="text-align:center;">
+                        <span style="font-family:'DM Mono',monospace;font-weight:700;color:#d97706;">${warnBatches} <span style="font-weight:400;font-size:11px;color:#94a3b8;">batches</span></span>
+                    </td>
+                    <td style="text-align:center;">
+                        <span style="font-family:'DM Mono',monospace;font-weight:700;color:#16a34a;">${stabBatches} <span style="font-weight:400;font-size:11px;color:#94a3b8;">batches</span></span>
+                    </td>
+                    <td><span style="font-family:'DM Mono',monospace;font-weight:600;color:#0f172a;">${total.toLocaleString()}</span></td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = rows.join('');
         }
 
         // ══════════════════════════════════════════
@@ -1931,6 +2133,140 @@
             });
             toast('EmailJS config cleared', 'info');
         };
+
+        // ── Promotion Modal functions ──
+        window.openPromotionModal = async function (batchId) {
+            const batch = criticalBucket.find(b => b.id === batchId) || warningBucket.find(b => b.id === batchId);
+            if (!batch) return;
+            
+            document.getElementById('promo-batch-id').value = batch.id;
+            document.getElementById('promo-batch-info').value = `${batch.productName} (Batch: ${batch.batchNumber}) - ${batch._daysLeft} days left`;
+            document.getElementById('promo-title').value = '';
+            document.getElementById('promo-offered-discount').value = '';
+            document.getElementById('promo-start').value = '';
+            document.getElementById('promo-end').value = '';
+            document.getElementById('promo-email-body').value = '';
+            document.getElementById('btn-send-promo').disabled = true;
+            
+            document.getElementById('promo-modal-overlay').classList.add('open');
+
+            // Fetch retailers
+            const select = document.getElementById('promo-retailer-id');
+            select.innerHTML = '<option value="">Loading retailers...</option>';
+            try {
+                const snap = await getDocs(collection(db, 'users'));
+                const retailers = [];
+                snap.forEach(d => {
+                    if (d.data().role === 'Retailer') {
+                        retailers.push({id: d.id, ...d.data()});
+                    }
+                });
+                if (retailers.length === 0) {
+                    select.innerHTML = '<option value="">No retailers found</option>';
+                } else {
+                    select.innerHTML = '<option value="">Select a retailer...</option>' + 
+                        retailers.map(r => `<option value="${r.id}">${r.displayName || r.email || r.id}</option>`).join('');
+                }
+            } catch (e) {
+                console.error("Error fetching retailers", e);
+                select.innerHTML = '<option value="">Error loading retailers</option>';
+            }
+        };
+
+        window.closePromotionModal = function (evt) {
+            if (evt && evt.target !== document.getElementById('promo-modal-overlay')) return;
+            document.getElementById('promo-modal-overlay').classList.remove('open');
+        };
+
+        window.generatePromotionEmail = function () {
+            const batchId = document.getElementById('promo-batch-id').value;
+            const discount = document.getElementById('promo-offered-discount').value;
+            const batch = criticalBucket.find(b => b.id === batchId) || warningBucket.find(b => b.id === batchId);
+            if (!batch) return;
+
+            const discountText = discount ? `at a special ${discount}% partner discount` : `at a promotional rate`;
+
+            const mockEmail = `Subject: Special Promotion on ${batch.productName}!\n\nDear Retail Partner,\n\nWe are offering an exclusive discount on ${batch.productName} (Batch ${batch.batchNumber}). This batch is approaching its optimal freshness window, and we'd like to extend a special promotion to you.\n\nQuantity Available: ${batch.quantity.toLocaleString()}\nExpiry: ${fmtDate(batch.expiryDate)}\n\nPlease reply to this email or contact your sales representative to secure your order ${discountText}.\n\nBest regards,\nNestlé Logistics Team`;
+            
+            document.getElementById('promo-email-body').value = mockEmail;
+            document.getElementById('btn-send-promo').disabled = false;
+        };
+
+        window.sendPromotionEmail = async function () {
+            const body = document.getElementById('promo-email-body').value;
+            const retailerId = document.getElementById('promo-retailer-id').value;
+            const batchId = document.getElementById('promo-batch-id').value;
+            
+            if (!retailerId) {
+                toast('Please select a retailer', 'error');
+                return;
+            }
+            if (!body) return;
+            
+            const btnEl = document.getElementById('btn-send-promo');
+            btnEl.disabled = true;
+            btnEl.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block;">⌛</span> Sending…';
+            
+            const cfg = getEjConfig();
+            
+            if (cfg.publicKey && cfg.serviceId && cfg.templateId) {
+                try {
+                    emailjs.init(cfg.publicKey);
+                    // Just a mock payload using existing template config
+                    await emailjs.send(cfg.serviceId, cfg.templateId, {
+                        message: body,
+                        to_email: 'retailers@example.com',
+                        subject: 'Special Promotion Offer'
+                    });
+                } catch (e) {
+                    console.warn('[SSAMS] EmailJS error on promo:', e);
+                }
+            } else {
+                // Mock sending delay
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            
+            try {
+                // Save to promotions collection
+                const batch = criticalBucket.find(b => b.id === batchId) || warningBucket.find(b => b.id === batchId);
+                const title = document.getElementById('promo-title').value;
+                const offeredDiscount = document.getElementById('promo-offered-discount').value;
+                const start = document.getElementById('promo-start').value;
+                const end = document.getElementById('promo-end').value;
+                
+                await addDoc(collection(db, 'promotions'), {
+                    batchID: batchId,
+                    sku: batch.productName,
+                    batchNumber: batch.batchNumber,
+                    quantity: batch.quantity,
+                    expiryDate: batch.expiryDate,
+                    retailerID: retailerId,
+                    promoTitle: title,
+                    offeredDiscount: offeredDiscount || 0,
+                    promoStart: start,
+                    promoEnd: end,
+                    status: 'Offered',
+                    timestamp: serverTimestamp()
+                });
+
+                // Update batch status
+                await updateDoc(doc(db, 'batches', batchId), {
+                    status: 'In Promotion'
+                });
+            } catch (e) {
+                console.error("Error creating promotion record:", e);
+                toast('Error saving promotion data', 'error');
+                btnEl.innerHTML = 'Send to Retailers';
+                btnEl.disabled = false;
+                return;
+            }
+            
+            toast('Promotional email sent to retailers successfully!', 'success');
+            closePromotionModal();
+            btnEl.innerHTML = 'Send to Retailers';
+            btnEl.disabled = false;
+        };
+
     </script>
 </body>
 

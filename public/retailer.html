@@ -96,6 +96,59 @@
         }
         .status-pending { background: #fff7ed; color: #d97706; border: 1px solid #ffedd5; }
         .status-completed { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+
+        /* Promotion Cards */
+        .promo-section {
+            background: linear-gradient(135deg, rgba(0, 48, 135, 0.03) 0%, rgba(0, 174, 239, 0.05) 100%);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px dashed var(--nestle-accent);
+        }
+        .promo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .promo-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .promo-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 48, 135, 0.08);
+            border-color: var(--nestle-accent);
+        }
+        .promo-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #ef4444;
+            color: #fff;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 800;
+            border-bottom-left-radius: 12px;
+            text-transform: uppercase;
+        }
+        .btn-claim {
+            width: 100%;
+            margin-top: 12px;
+            padding: 8px;
+            border-radius: 10px;
+            background: var(--nestle-blue);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            transition: opacity 0.2s;
+        }
+        .btn-claim:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -167,6 +220,20 @@
 
         <!-- Content -->
         <div class="p-8">
+            <!-- Promotions Section -->
+            <div id="promotions-container" class="promo-section hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM16 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1z"/></svg>
+                        Active Promotional Offers
+                    </h3>
+                    <span class="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Exclusive for You</span>
+                </div>
+                <div id="promotions-grid" class="promo-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
             <h3 class="text-lg font-bold text-slate-800 mb-4">Live Warehouse Stock</h3>
             
             <div id="live-products-grid" class="stock-grid mb-8">
@@ -247,9 +314,13 @@
         let currentUser = null;
         let currentRetailerName = '';
         let liveProducts = {}; // Map of productName -> qty
+        let activePromotions = [];
         let selectedProduct = null;
+        let selectedPromoId = null;
+        let selectedPromoDiscount = 0;
         let orderHistory = [];
         let unsubHistory = null;
+        let unsubPromos = null;
 
         // UI Utils
         const $ = id => document.getElementById(id);
@@ -336,6 +407,7 @@
                     
                     startLiveStockListener();
                     startHistoryListener(user.uid);
+                    startPromotionsListener(user.uid);
                 } else {
                     await signOut(auth);
                 }
@@ -343,6 +415,7 @@
                 currentUser = null;
                 if (unsubStock) unsubStock();
                 if (unsubHistory) unsubHistory();
+                if (unsubPromos) unsubPromos();
                 $('main-portal').style.display = 'none';
                 $('auth-portal').style.display = 'block';
             }
@@ -405,6 +478,60 @@
                 window.deselectAll();
             }
         }
+
+        // ── Promotions Listener ──
+        function startPromotionsListener(uid) {
+            const q = query(collection(db, 'live_campaigns'), where('retailerID', '==', uid), where('status', '==', 'active'));
+            unsubPromos = onSnapshot(q, (snap) => {
+                activePromotions = [];
+                snap.forEach(d => {
+                    activePromotions.push({ id: d.id, ...d.data() });
+                });
+                renderPromotions();
+            }, (error) => {
+                console.error("Promotions sync error:", error);
+            });
+        }
+
+        function renderPromotions() {
+            const container = $('promotions-container');
+            const grid = $('promotions-grid');
+            
+            if (activePromotions.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            grid.innerHTML = activePromotions.map(p => `
+                <div class="promo-card">
+                    <div class="promo-badge">${p.discountPercent}% OFF</div>
+                    <h4 class="font-bold text-slate-800 text-sm mb-1">${p.promotionTitle}</h4>
+                    <p class="text-[11px] text-slate-500 mb-3">${p.productName} (Standard Nestlé Promo)</p>
+                    
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        <span>Starts: ${p.startDate}</span>
+                        <span>Ends: ${p.endDate}</span>
+                    </div>
+                    
+                    <button class="btn-claim" onclick="claimPromo('${p.id}')">Claim This Offer</button>
+                </div>
+            `).join('');
+        }
+
+        window.claimPromo = function(promoId) {
+            const promo = activePromotions.find(p => p.id === promoId);
+            if (!promo) return;
+
+            selectedPromoId = promo.id;
+            selectedPromoDiscount = promo.discountPercent;
+            
+            // Auto-select product and focus quantity
+            selectProduct(promo.productName);
+            $('order-qty').placeholder = `Max available: ${promo.quantityAvailable}`;
+            $('order-qty').value = promo.quantityAvailable; // Default to full batch if they want
+            showToast(`Applied ${promo.discountPercent}% discount for ${promo.productName}`, 'success');
+        };
 
         // ── Order History ──
         function startHistoryListener(uid) {
@@ -469,9 +596,12 @@
 
         window.deselectAll = function() {
             selectedProduct = null;
+            selectedPromoId = null;
+            selectedPromoDiscount = 0;
             renderLiveGrid();
             $('selected-product-name').value = 'Please select a product from above';
             $('order-qty').value = '';
+            $('order-qty').placeholder = 'Units';
             $('order-form-container').classList.add('opacity-50', 'pointer-events-none');
         };
 
@@ -508,6 +638,8 @@
                     productName: selectedProduct,
                     quantityRequested: qty,
                     preferredLocation: location,
+                    promotionID: selectedPromoId || null,
+                    appliedDiscount: selectedPromoDiscount || 0,
                     status: 'pending',
                     submittedAt: serverTimestamp()
                 });

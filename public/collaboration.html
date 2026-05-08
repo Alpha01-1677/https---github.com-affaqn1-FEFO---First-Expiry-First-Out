@@ -1,0 +1,546 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nestlé SSAMS — B2B Collaboration Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --nestle-blue: #003087;
+            --nestle-light-blue: #0057B8;
+            --nestle-accent: #00AEEF;
+        }
+
+        * {
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* ── PB11: Collaboration Log ── */
+        .collab-log-panel {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 48, 135, 0.06);
+            overflow: hidden;
+            margin-top: 28px;
+        }
+
+        .collab-log-header {
+            padding: 16px 22px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, #f8faff, #f0f4ff);
+        }
+
+        .log-msg-bubble {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .log-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .log-bubble-content {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            flex: 1;
+        }
+
+        .log-bubble-content.mine {
+            background: rgba(0, 48, 135, 0.06);
+            border-color: rgba(0, 48, 135, 0.12);
+        }
+
+        .log-input-area {
+            border-top: 1px solid #f1f5f9;
+            padding: 14px 18px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .log-input {
+            flex: 1;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+            color: #0f172a;
+        }
+
+        .log-input:focus {
+            border-color: var(--nestle-accent);
+        }
+
+        .log-send-btn {
+            padding: 9px 18px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--nestle-blue), var(--nestle-light-blue));
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        .log-send-btn:hover:not(:disabled) {
+            opacity: 0.88;
+        }
+
+        .log-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .campaign-card-selectable {
+            cursor: pointer;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .campaign-card-selectable.selected {
+            border-color: var(--nestle-light-blue) !important;
+            box-shadow: 0 0 0 2px rgba(0, 87, 184, 0.18), 0 4px 20px rgba(0, 48, 135, 0.1);
+        }
+    </style>
+    <script>
+        // Basic session check
+        if (!sessionStorage.getItem('user_uid')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</head>
+
+<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
+
+    <!-- Container for dynamic sidebar -->
+    <div id="sidebar-container" class="h-full z-20 flex-shrink-0 flex shadow-lg relative"></div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <div id="header-container" class="z-10 flex-shrink-0"></div>
+
+        <main class="flex-1 overflow-y-auto p-6 md:p-10">
+            <div class="max-w-6xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Collaboration Portal</h1>
+                        <p class="text-sm text-slate-500 mt-1">Monitor live and accepted promotional campaigns across
+                            all partners.</p>
+                    </div>
+                </div>
+
+                <div id="campaigns-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <!-- Campaigns injected here -->
+                </div>
+
+                <div id="no-data-msg"
+                    class="hidden flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-200 shadow-sm mt-8">
+                    <svg class="w-12 h-12 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                        </path>
+                    </svg>
+                    <p class="text-slate-500 font-medium">No active or accepted campaigns found.</p>
+                </div>
+
+                <!-- ── PB11: Collaboration Log Panel ── -->
+                <div id="collab-log-panel" class="collab-log-panel" style="display:none;">
+                    <div class="collab-log-header">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800" id="log-panel-title">Collaboration Log</h3>
+                            <p class="text-xs text-slate-500 mt-0.5" id="log-panel-subtitle">Select a campaign to view
+                                its coordination thread</p>
+                        </div>
+                        <button onclick="closeCollabLog()" class="text-slate-400 hover:text-slate-600 transition"
+                            style="border:none;background:none;cursor:pointer;padding:4px;">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="log-messages" style="padding:18px 22px;max-height:340px;overflow-y:auto;">
+                        <div class="text-center text-slate-400 text-sm py-8">No messages yet. Be the first to post!
+                        </div>
+                    </div>
+                    <div class="log-input-area">
+                        <input type="text" id="log-input" class="log-input"
+                            placeholder="Add a coordination note or update…"
+                            onkeydown="if(event.key==='Enter') postLogMessage()" />
+                        <button id="log-send-btn" class="log-send-btn" onclick="postLogMessage()">
+                            <span id="log-send-text">Post</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Retailer to Update Sales -->
+    <div id="update-sales-modal"
+        class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center transition-opacity">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform scale-95 transition-transform">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg font-bold">Update Weekly Sales</h3>
+                <button onclick="closeSalesModal()" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg></button>
+            </div>
+            <input type="hidden" id="modal-promo-id">
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Units Sold This
+                    Week</label>
+                <input type="number" id="units-sold-input"
+                    class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    placeholder="e.g. 50" min="1">
+            </div>
+            <button id="btn-submit-sales" onclick="submitSalesUpdate()"
+                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">Submit
+                Update</button>
+        </div>
+    </div>
+
+    <!-- Firebase & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, increment, addDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Use sidebar.js for common layout if applicable (retailers have custom sidebar in retailer_portal.html, but let's see)
+        import { buildSidebar, buildHeader, startClock, requireAuth, toast } from './sidebar.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // UI Setup
+        requireAuth();
+        const role = sessionStorage.getItem('user_role') || '';
+        const roleLower = role.toLowerCase();
+        const isRetailer = roleLower === 'retailer';
+        const isManager = roleLower.includes('planner') || roleLower.includes('supervisor');
+
+        // Note: For Retailer, we might want their specific sidebar layout. For now, we'll try to use buildSidebar. 
+        // We'll dynamically construct it. Retailers shouldn't see internal tools.
+
+        // Setup Header/Sidebar
+        document.getElementById('header-container').innerHTML = buildHeader('B2B Collaboration', 'Live Campaign Monitoring');
+        document.getElementById('sidebar-container').innerHTML = buildSidebar('collaboration');
+        startClock();
+
+        // Specific fix for retailer sidebar look:
+        if (isRetailer) {
+            // Overwrite sidebar for retailer to match retailer_portal.html
+            document.getElementById('sidebar-container').innerHTML = `
+            <div class="w-64 h-full flex flex-col shadow-lg relative z-10" style="background: linear-gradient(180deg, var(--nestle-blue), var(--nestle-light-blue));">
+                <div class="p-6 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 shadow-sm">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-sm font-bold text-white tracking-wide">Retailer Portal</h1>
+                        <p class="text-[10px] text-blue-200 uppercase tracking-widest mt-0.5">Nestlé SSAMS</p>
+                    </div>
+                </div>
+                <nav class="flex-1 px-4 py-4 space-y-1">
+                    <a href="retailer_portal.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-100 font-medium transition hover:bg-white/10">
+                        <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path></svg>
+                        Promotion Offers
+                    </a>
+                    <a href="collaboration.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/15 text-white font-medium transition hover:bg-white/20">
+                        <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        Collaboration Portal
+                    </a>
+                </nav>
+                <div class="p-4 border-t border-white/10">
+                    <div class="mb-4 px-2">
+                        <div class="text-xs text-blue-200 uppercase tracking-wider mb-1 font-semibold">User</div>
+                        <div class="text-sm text-white font-medium truncate">${sessionStorage.getItem('user_name') || 'Retailer'}</div>
+                    </div>
+                    <button id="btn-logout" class="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-white/10 hover:bg-red-500 hover:text-white transition border border-white/20 hover:border-red-500 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>`;
+            document.getElementById('btn-logout').addEventListener('click', async () => {
+                await signOut(auth); sessionStorage.clear(); window.location.href = 'index.html';
+            });
+        }
+
+        window.doLogout = async function () {
+            await signOut(auth);
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        };
+
+        // Data Fetching
+        onAuthStateChanged(auth, user => {
+            if (!user) { window.location.href = 'index.html'; return; }
+
+            let q;
+            if (isRetailer) {
+                q = query(collection(db, 'live_campaigns'), where('retailerID', '==', user.uid), where('status', 'in', ['active', 'reserved']));
+            } else {
+                q = query(collection(db, 'live_campaigns'), where('status', 'in', ['active', 'reserved']));
+            }
+
+            onSnapshot(q, snap => {
+                const grid = document.getElementById('campaigns-grid');
+                const noData = document.getElementById('no-data-msg');
+                grid.innerHTML = '';
+
+                if (snap.empty) {
+                    noData.classList.remove('hidden');
+                    noData.classList.add('flex');
+                } else {
+                    noData.classList.add('hidden');
+                    noData.classList.remove('flex');
+
+                    snap.forEach(d => {
+                        const offer = d.data();
+                        const offerId = d.id;
+
+                        const quantity = offer.quantityAvailable || 0;
+                        const soldUnits = offer.soldUnits || 0;
+                        const unitsRemaining = Math.max(0, quantity - soldUnits);
+                        const progressPct = quantity > 0 ? Math.min(100, Math.round((soldUnits / quantity) * 100)) : 0;
+
+                        let statusBadge = '';
+                        if (offer.status === 'active') statusBadge = '<span class="px-2.5 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-md">Available (Awaiting Retailer)</span>';
+                        else if (offer.status === 'reserved') statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Live / Accepted</span>';
+
+                        let actionArea = '';
+                        if (isManager && offer.status === 'active') {
+                            actionArea = `<div class="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500 italic text-center">Waiting for retailer to accept...</div>`;
+                        } else if (isRetailer && offer.status === 'reserved') {
+                            actionArea = `<button onclick="openSalesModal('${offerId}')" class="w-full mt-4 py-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 font-bold rounded-lg text-sm transition">Update Weekly Sales</button>`;
+                        } else if (isRetailer && offer.status === 'active') {
+                             actionArea = `<a href="retailer_portal.html" class="block w-full mt-4 py-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 font-bold rounded-lg text-sm text-center transition">Accept Offer in Portal</a>`;
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = `campaign-card-selectable bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition ${selectedCampaignId === offerId ? 'selected' : ''}`;
+                        card.id = `card-${offerId}`;
+                        card.onclick = () => selectCampaign(offerId, offer.promotionTitle);
+                        
+                        card.innerHTML = `
+                                <div class="flex justify-between items-start mb-3">
+                                    ${statusBadge}
+                                    <span class="text-xs font-bold text-slate-400 font-mono">${offer.batchNumber || 'N/A'}</span>
+                                </div>
+                                <h3 class="font-bold text-slate-800 text-lg">${offer.promotionTitle || 'Promotion'}</h3>
+                                <div class="text-sm font-medium text-emerald-600 mb-4">${offer.discountPercent}% Off</div>
+                                
+                                <div class="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-100">
+                                    <div class="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
+                                        <span>Progress</span>
+                                        <span>${progressPct}% Sold</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 rounded-full h-2 mb-2 overflow-hidden">
+                                        <div class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: ${progressPct}%"></div>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <div class="font-medium text-slate-600"><span class="font-bold text-slate-800">${soldUnits}</span> Sold</div>
+                                        <div class="font-medium text-slate-600"><span class="font-bold text-slate-800">${unitsRemaining}</span> Remaining</div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-4 text-xs font-medium text-slate-500">
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        ${offer.startDate} to ${offer.endDate}
+                                    </div>
+                                </div>
+                                
+                                ${actionArea}
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+            });
+        });
+
+        // Collaboration Log State
+        let selectedCampaignId = null;
+        let unsubscribeMessages = null;
+
+        window.selectCampaign = function(id, title) {
+            if (selectedCampaignId === id) return;
+            
+            // UI Feedback
+            if (selectedCampaignId) {
+                const oldCard = document.getElementById(`card-${selectedCampaignId}`);
+                if (oldCard) oldCard.classList.remove('selected');
+            }
+            selectedCampaignId = id;
+            document.getElementById(`card-${id}`).classList.add('selected');
+            
+            // Show Panel
+            document.getElementById('collab-log-panel').style.display = 'block';
+            document.getElementById('log-panel-title').textContent = `Coordination: ${title}`;
+            document.getElementById('log-panel-subtitle').textContent = "Live chat with your Nestlé Partner";
+            
+            // Listen to messages
+            if (unsubscribeMessages) unsubscribeMessages();
+            const msgQ = query(collection(db, 'live_campaigns', id, 'messages'), orderBy('timestamp', 'asc'));
+            
+            unsubscribeMessages = onSnapshot(msgQ, snap => {
+                const container = document.getElementById('log-messages');
+                container.innerHTML = '';
+                
+                if (snap.empty) {
+                    container.innerHTML = '<div class="text-center text-slate-400 text-sm py-8">No coordination notes yet.</div>';
+                } else {
+                    snap.forEach(d => {
+                        const msg = d.data();
+                        const isMe = msg.uid === sessionStorage.getItem('user_uid');
+                        const time = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
+                        
+                        const bubble = document.createElement('div');
+                        bubble.className = 'log-msg-bubble';
+                        bubble.innerHTML = `
+                            <div class="log-avatar" style="background: ${isMe ? 'var(--nestle-blue)' : '#64748b'}">${msg.senderName?.charAt(0) || 'U'}</div>
+                            <div class="log-bubble-content ${isMe ? 'mine' : ''}">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-[11px] font-bold text-slate-600">${msg.senderName}</span>
+                                    <span class="text-[10px] text-slate-400 font-mono">${time}</span>
+                                </div>
+                                <div class="text-xs text-slate-700 leading-relaxed">${msg.text}</div>
+                            </div>
+                        `;
+                        container.appendChild(bubble);
+                    });
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+        };
+
+        window.closeCollabLog = function() {
+            if (selectedCampaignId) {
+                const card = document.getElementById(`card-${selectedCampaignId}`);
+                if (card) card.classList.remove('selected');
+            }
+            selectedCampaignId = null;
+            document.getElementById('collab-log-panel').style.display = 'none';
+            if (unsubscribeMessages) unsubscribeMessages();
+        };
+
+        window.postLogMessage = async function() {
+            const input = document.getElementById('log-input');
+            const text = input.value.trim();
+            if (!text || !selectedCampaignId) return;
+            
+            input.disabled = true;
+            try {
+                await addDoc(collection(db, 'live_campaigns', selectedCampaignId, 'messages'), {
+                    text: text,
+                    uid: sessionStorage.getItem('user_uid'),
+                    senderName: sessionStorage.getItem('user_name') || 'Partner',
+                    timestamp: serverTimestamp()
+                });
+                input.value = '';
+            } catch (e) {
+                console.error(e);
+                alert("Failed to send message.");
+            } finally {
+                input.disabled = false;
+                input.focus();
+            }
+        };
+
+        window.verifyPromotion = async function (id) {
+            try {
+                await updateDoc(doc(db, 'live_campaigns', id), { status: 'reserved' }); // In this flow, Manager verifying effectively 'reserves' it if not already
+                if (typeof toast === 'function') toast('Promotion is now verified!', 'success');
+            } catch (e) {
+                console.error(e);
+                alert("Failed to update status.");
+            }
+        };
+
+        window.openSalesModal = function (id) {
+            document.getElementById('modal-promo-id').value = id;
+            document.getElementById('units-sold-input').value = '';
+            const modal = document.getElementById('update-sales-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove('scale-95');
+                modal.firstElementChild.classList.add('scale-100');
+            }, 10);
+        };
+
+        window.closeSalesModal = function () {
+            const modal = document.getElementById('update-sales-modal');
+            modal.firstElementChild.classList.remove('scale-100');
+            modal.firstElementChild.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 150);
+        };
+
+        window.submitSalesUpdate = async function () {
+            const id = document.getElementById('modal-promo-id').value;
+            const input = document.getElementById('units-sold-input').value;
+            const addedUnits = parseInt(input, 10);
+
+            if (!id || isNaN(addedUnits) || addedUnits <= 0) {
+                alert("Please enter a valid number of units.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-submit-sales');
+            btn.disabled = true;
+            btn.textContent = "Updating...";
+
+            try {
+                await updateDoc(doc(db, 'live_campaigns', id), {
+                    soldUnits: increment(addedUnits)
+                });
+                closeSalesModal();
+                if (typeof toast === 'function') toast('Sales updated successfully!', 'success');
+            } catch (e) {
+                console.error(e);
+                alert("Failed to update sales.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Submit Update";
+            }
+        };
+    </script>
+</body>
+
+</html>

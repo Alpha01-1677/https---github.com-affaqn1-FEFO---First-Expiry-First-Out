@@ -274,6 +274,11 @@
                 <span class="text-slate-600 font-medium">Logistics Manager</span>
                 <span class="mono text-slate-400">logistics@nestle.com</span>
             </button>
+            <button class="cred-pill" onclick="fillCreds('salesmanager@nestle.com','nestle123')">
+                <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                <span class="text-slate-600 font-medium">Sales Manager</span>
+                <span class="mono text-slate-400">salesmanager@nestle.com</span>
+            </button>
         </div>
 
         <!-- ── Retailer Portal link ── -->
@@ -405,6 +410,8 @@
                     role = 'Demand Planner';
                 } else if (email.toLowerCase().includes('logistics')) {
                     role = 'Logistics Manager';
+                } else if (email.toLowerCase().includes('salesmanager')) {
+                    role = 'Sales Manager';
                 }
 
                 const userData = snap.exists()
@@ -417,20 +424,11 @@
                 const isSupervisorRole = actualRole.includes('supervisor');
                 const isDemandPlanner = actualRole.includes('demand planner') || actualRole.includes('demandplanner');
                 const isLogistics = actualRole.includes('logistics');
-                const isManagementRole = isSupervisorRole || isDemandPlanner || isLogistics;
+                const isSalesManager = actualRole.includes('sales manager') || actualRole.includes('salesmanager');
+                const isManagementRole = isSupervisorRole || isDemandPlanner || isLogistics || isSalesManager;
+                const isRetailer = actualRole === 'retailer';
 
-                if (actualRole === 'retailer') {
-                    await signOut(auth);
-                    window.isManualLogin = false;
-                    errMsg.textContent = 'Access Denied: Retailers must use the Retailer Portal to sign in.';
-                    errEl.classList.remove('hidden');
-                    document.getElementById('login-btn').disabled = false;
-                    document.getElementById('login-btn-text').textContent = 'Sign In';
-                    document.getElementById('login-spinner').classList.add('hidden');
-                    return;
-                }
-
-                if (activeTab === 'supervisor' && !isManagementRole) {
+                if (activeTab === 'supervisor' && !isManagementRole && !isRetailer) {
                     await signOut(auth);
                     window.isManualLogin = false;
                     errMsg.textContent = 'Access Denied: Please use the Warehouse Staff login tab.';
@@ -441,10 +439,10 @@
                     return;
                 }
 
-                if (activeTab === 'staff' && isManagementRole) {
+                if (activeTab === 'staff' && (isManagementRole || isRetailer)) {
                     await signOut(auth);
                     window.isManualLogin = false;
-                    errMsg.textContent = 'Access Denied: Please use the Management Portal login tab.';
+                    errMsg.textContent = 'Access Denied: Please use the correct login tab (or Management Portal).';
                     errEl.classList.remove('hidden');
                     document.getElementById('login-btn').disabled = false;
                     document.getElementById('login-btn-text').textContent = 'Sign In';
@@ -471,7 +469,17 @@
                 // PB1: Redirect based on role
                 // Wait 2 seconds before redirecting
                 setTimeout(() => {
-                    window.location.href = isManagementRole ? 'dashboard.html' : 'batches.html';
+                    if (isRetailer) {
+                        window.location.href = 'retailer_portal.html';
+                    } else if (isSalesManager) {
+                        window.location.href = 'sales_manager_portal.html';
+                    } else if (isDemandPlanner) {
+                        window.location.href = 'dashboard.html'; // Assuming dashboard.html is the planner dashboard
+                    } else if (isManagementRole) {
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        window.location.href = 'batches.html';
+                    }
                 }, 2000);
 
             } catch (e) {
