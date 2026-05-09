@@ -631,6 +631,145 @@
         .critical-toggle-link.open svg {
             transform: rotate(180deg);
         }
+
+        /* ── PB14: Predictive Velocity Warning Styles ── */
+        .velocity-warning-section {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(245, 158, 11, 0.25);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(245, 158, 11, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+            position: relative;
+        }
+
+        .velocity-warning-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(254, 243, 199, 0.35) 0%, transparent 55%);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .velocity-header-bar {
+            padding: 16px 24px 14px;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+        }
+
+        .velocity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .velocity-badge .pulse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #f59e0b;
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+            animation: velocityPulse 2.5s infinite;
+        }
+
+        @keyframes velocityPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+            }
+
+            70% {
+                box-shadow: 0 0 0 7px rgba(245, 158, 11, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+            }
+        }
+
+        .velocity-row {
+            transition: background 0.2s ease;
+        }
+
+        .velocity-row:hover {
+            background: rgba(254, 243, 199, 0.25);
+        }
+
+        .velocity-meter {
+            position: relative;
+            height: 6px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            overflow: hidden;
+            min-width: 80px;
+        }
+
+        .velocity-meter-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .velocity-gap-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .velocity-gap-high {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .velocity-gap-moderate {
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .velocity-gap-low {
+            background: rgba(234, 88, 12, 0.1);
+            color: #ea580c;
+            border: 1px solid rgba(234, 88, 12, 0.2);
+        }
+
+        .velocity-empty-state {
+            text-align: center;
+            padding: 36px 20px;
+            color: #94a3b8;
+            font-size: 13.5px;
+        }
+
+        .velocity-empty-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.06));
+            margin: 0 auto 12px;
+        }
     </style>
 </head>
 
@@ -664,7 +803,10 @@
                             <h1
                                 style="font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;margin-bottom:8px;">
                                 Sprint 2 — Inventory Aging Monitoring &amp; Retailer Collaboration</h1>
-                            <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">PB5 Aging Dashboard &nbsp;·&nbsp; PB6 Bucket Classification &nbsp;·&nbsp; PB7 Expiry Risk Mgmt &nbsp;·&nbsp; PB8 Warehouse Risk View &nbsp;·&nbsp; PB9 Retailer Portal &nbsp;·&nbsp; PB10 Promotion Mgmt &nbsp;·&nbsp; PB11 B2B Collaboration</p>
+                            <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">PB5 Aging Dashboard
+                                &nbsp;·&nbsp; PB6 Bucket Classification &nbsp;·&nbsp; PB7 Expiry Risk Mgmt &nbsp;·&nbsp;
+                                PB8 Warehouse Risk View &nbsp;·&nbsp; PB9 Retailer Portal &nbsp;·&nbsp; PB10 Promotion
+                                Mgmt &nbsp;·&nbsp; PB11 B2B Collaboration</p>
                         </div>
                         <div style="text-align:center;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:16px 28px;backdrop-filter:blur(8px);"
                             class="hidden md:block">
@@ -760,6 +902,72 @@
                                     </svg>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════
+                     PB14: Predictive Early Warnings Section
+                ══════════════════════════════════════════ -->
+                <div id="velocity-warning-wrapper">
+                    <div class="section-label" style="display:flex;align-items:center;gap:8px;">
+                        Predictive Early Warnings · PB14
+                        <span
+                            style="font-size:10px;font-weight:500;text-transform:none;letter-spacing:0;color:#d97706;background:rgba(254,243,199,0.6);padding:2px 8px;border-radius:6px;border:1px solid rgba(245,158,11,0.2);">Velocity
+                            Analysis</span>
+                    </div>
+                    <div class="velocity-warning-section" id="velocity-warning-panel">
+                        <div class="velocity-header-bar">
+                            <div>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <h3
+                                        style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;margin:0;">
+                                        ⚡ Slow-Moving Batch Alerts
+                                    </h3>
+                                    <span class="velocity-badge">
+                                        <span class="pulse-dot"></span>
+                                        Predictive
+                                    </span>
+                                </div>
+                                <p style="font-size:12px;color:#94a3b8;margin-top:4px;">Batches with &gt;30 days
+                                    remaining
+                                    whose current sales velocity is too slow to clear stock before expiry</p>
+                            </div>
+                            <div id="velocity-summary-badge"
+                                style="font-size:11px;font-weight:600;color:#d97706;background:rgba(245,158,11,0.08);padding:4px 12px;border-radius:8px;border:1px solid rgba(245,158,11,0.15);white-space:nowrap;">
+                                — flagged
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;position:relative;z-index:1;">
+                            <table class="data-table" id="velocity-warning-table">
+                                <thead>
+                                    <tr>
+                                        <th>Batch #</th>
+                                        <th>Product</th>
+                                        <th>Days Left</th>
+                                        <th>Remaining Qty</th>
+                                        <th style="min-width:130px;">Required Velocity</th>
+                                        <th style="min-width:130px;">Historical Velocity</th>
+                                        <th>Gap</th>
+                                        <th>Risk</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="velocity-warning-tbody">
+                                    <tr>
+                                        <td colspan="8" class="velocity-empty-state">
+                                            <div class="velocity-empty-icon">
+                                                <svg style="width:24px;height:24px;color:#22c55e;" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </div>
+                                            All batches are selling at adequate velocity
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -947,7 +1155,8 @@
                 <div id="section-regional-map">
                     <div class="section-label" style="display:flex; justify-content:space-between; align-items:center;">
                         Warehouse Risk View
-                        <select id="map-warehouse-filter" onchange="filterMap()" style="padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; outline:none; background:rgba(255,255,255,0.7); border:1px solid #e2e8f0;">
+                        <select id="map-warehouse-filter" onchange="filterMap()"
+                            style="padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; outline:none; background:rgba(255,255,255,0.7); border:1px solid #e2e8f0;">
                             <option value="ALL">All Warehouses</option>
                             <option value="Colombo-01">Colombo-01</option>
                             <option value="Galle-02">Galle-02</option>
@@ -960,32 +1169,39 @@
                     </div>
                 </div>
 
-                 <!-- ── PB8: Warehouse Risk Status Table ── -->
-                 <div class="table-glass" style="margin-top:14px;overflow:hidden;">
-                     <div style="padding:14px 20px 12px;border-bottom:1px solid rgba(226,232,240,0.7);display:flex;align-items:center;justify-content:space-between;">
-                         <div>
-                             <h3 style="font-size:14px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Warehouse Risk Status — PB8</h3>
-                             <p style="font-size:11.5px;color:#94a3b8;margin-top:2px;">District-level aging bucket breakdown · Real-time</p>
-                         </div>
-                     </div>
-                     <div style="overflow-x:auto;">
-                         <table class="data-table" id="warehouse-risk-table">
-                             <thead>
-                                 <tr>
-                                     <th>Warehouse</th>
-                                     <th>Risk Level</th>
-                                     <th style="color:#dc2626;">🔴 Critical (0–30d)</th>
-                                     <th style="color:#d97706;">🟡 Warning (31–60d)</th>
-                                     <th style="color:#16a34a;">🟢 Stable (60+d)</th>
-                                     <th>Total Units</th>
-                                 </tr>
-                             </thead>
-                             <tbody id="warehouse-risk-tbody">
-                                 <tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">Loading warehouse data…</td></tr>
-                             </tbody>
-                         </table>
-                     </div>
-                 </div>
+                <!-- ── PB8: Warehouse Risk Status Table ── -->
+                <div class="table-glass" style="margin-top:14px;overflow:hidden;">
+                    <div
+                        style="padding:14px 20px 12px;border-bottom:1px solid rgba(226,232,240,0.7);display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <h3 style="font-size:14px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Warehouse
+                                Risk Status — PB8</h3>
+                            <p style="font-size:11.5px;color:#94a3b8;margin-top:2px;">District-level aging bucket
+                                breakdown · Real-time</p>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="data-table" id="warehouse-risk-table">
+                            <thead>
+                                <tr>
+                                    <th>Warehouse</th>
+                                    <th>Risk Level</th>
+                                    <th style="color:#dc2626;">🔴 Critical (0–30d)</th>
+                                    <th style="color:#d97706;">🟡 Warning (31–60d)</th>
+                                    <th style="color:#16a34a;">🟢 Stable (60+d)</th>
+                                    <th>Total Units</th>
+                                </tr>
+                            </thead>
+                            <tbody id="warehouse-risk-tbody">
+                                <tr>
+                                    <td colspan="6"
+                                        style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">Loading
+                                        warehouse data…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <!-- ── Batch Overview mini-table ── -->
                 <div>
@@ -1201,10 +1417,13 @@
         <div class="ej-modal" onclick="event.stopPropagation()" style="max-width: 500px;">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
                 <div>
-                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Trigger Promotion</h2>
-                    <p style="font-size:12px;color:#94a3b8;margin-top:4px;">Generate and send promotional offers for critical batches to retailers.</p>
+                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Trigger Promotion
+                    </h2>
+                    <p style="font-size:12px;color:#94a3b8;margin-top:4px;">Generate and send promotional offers for
+                        critical batches to retailers.</p>
                 </div>
-                <button onclick="closePromotionModal()" style="border:none;background:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:20px;line-height:1;">×</button>
+                <button onclick="closePromotionModal()"
+                    style="border:none;background:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:20px;line-height:1;">×</button>
             </div>
 
             <div class="ej-field">
@@ -1215,7 +1434,8 @@
 
             <div class="ej-field">
                 <label>Select Retailer</label>
-                <select id="promo-retailer-id" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;">
+                <select id="promo-retailer-id"
+                    style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;">
                     <option value="">Loading retailers...</option>
                 </select>
             </div>
@@ -1224,7 +1444,7 @@
                 <label>Promotional Title</label>
                 <input id="promo-title" type="text" placeholder="e.g., Weekend Clearance Sale" />
             </div>
-            
+
             <div class="ej-field">
                 <label>Offered Discount (%)</label>
                 <input id="promo-offered-discount" type="number" placeholder="e.g., 30" min="0" max="100" />
@@ -1242,16 +1462,21 @@
             </div>
 
             <div style="margin-bottom: 16px;">
-                <button onclick="generatePromotionEmail()" style="padding:8px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#003087;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s ease;">✨ Generate Promotional Email</button>
+                <button onclick="generatePromotionEmail()"
+                    style="padding:8px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#003087;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s ease;">✨
+                    Generate Promotional Email</button>
             </div>
 
             <div class="ej-field">
                 <label>Email Body</label>
-                <textarea id="promo-email-body" rows="6" placeholder="Click generate to create an email..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+                <textarea id="promo-email-body" rows="6" placeholder="Click generate to create an email..."
+                    style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
             </div>
 
             <div style="display:flex;gap:10px;margin-top:20px;">
-                <button id="btn-send-promo" onclick="sendPromotionEmail()" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.25);transition:all 0.2s ease;" disabled>Send to Retailers</button>
+                <button id="btn-send-promo" onclick="sendPromotionEmail()"
+                    style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.25);transition:all 0.2s ease;"
+                    disabled>Send to Retailers</button>
             </div>
         </div>
     </div>
@@ -1318,7 +1543,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, query, where, orderBy, onSnapshot, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { buildSidebar, buildHeader, toast, fmtDate, shelfLifePct, mrslStatus, badgeHtml, shelfBar, startClock } from './sidebar.js';
 
         const firebaseConfig = {
@@ -1361,7 +1586,7 @@
             const isDemandPlanner = roleLower.includes('demand planner') || roleLower.includes('demandplanner');
             const isLogisticsManager = roleLower.includes('logistics');
             const isSalesManager = roleLower.includes('sales manager') || roleLower.includes('salesmanager');
-            
+
             if (!isSupervisor && !isDemandPlanner && !isLogisticsManager && !isSalesManager) {
                 sessionStorage.setItem('access_denied_msg', 'Access Denied: Managers Only');
                 window.location.href = 'batches.html';
@@ -1370,19 +1595,19 @@
 
             // Sub-RBAC: if only Logistics Manager, hide other dashboard sections
             if (isLogisticsManager && !isSupervisor && !isDemandPlanner) {
-                 document.querySelectorAll('.section-label').forEach(el => {
-                     // Hides container of sections if it's not the map
-                     const parent = el.parentElement;
-                     if (parent.id !== 'section-regional-map') {
-                         parent.style.display = 'none';
-                     }
-                 });
-                 // Also hide Live Metrics grid and the Sprint Banner
-                 const metricsGrid = document.querySelector('.metrics-grid');
-                 if (metricsGrid) metricsGrid.style.display = 'none';
-                 
-                 const sprintBanner = document.getElementById('sprint-hero-banner');
-                 if (sprintBanner) sprintBanner.style.display = 'none';
+                document.querySelectorAll('.section-label').forEach(el => {
+                    // Hides container of sections if it's not the map
+                    const parent = el.parentElement;
+                    if (parent.id !== 'section-regional-map') {
+                        parent.style.display = 'none';
+                    }
+                });
+                // Also hide Live Metrics grid and the Sprint Banner
+                const metricsGrid = document.querySelector('.metrics-grid');
+                if (metricsGrid) metricsGrid.style.display = 'none';
+
+                const sprintBanner = document.getElementById('sprint-hero-banner');
+                if (sprintBanner) sprintBanner.style.display = 'none';
             }
 
             // Inject sidebar & header
@@ -1515,7 +1740,7 @@
 
                 const isEscalated = b.status === 'escalated';
                 const isPromoted = b.status === 'on_promotion';
-                
+
                 let escalateBtn;
                 if (isPromoted) {
                     escalateBtn = `<button class="btn-action" style="width:100%;justify-content:center;background:#f0fdf4;color:#15803d;border-color:#dcfce7;cursor:not-allowed;" disabled>
@@ -1577,14 +1802,14 @@
         };
 
         // ── Escalate Batch to Sales Manager ──
-        window.escalateBatch = async function(batchId, btnEl) {
+        window.escalateBatch = async function (batchId, btnEl) {
             if (!batchId) return;
             try {
                 if (btnEl) {
                     btnEl.disabled = true;
                     btnEl.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block;">⏳</span> Escalating…';
                 }
-                await updateDoc(doc(db, 'batches', batchId), { 
+                await updateDoc(doc(db, 'batches', batchId), {
                     status: 'escalated',
                     escalatedAt: serverTimestamp()
                 });
@@ -1638,6 +1863,9 @@
                 classifyBuckets(batches);
                 updateBucketUI();
 
+                // ── PB14: Predictive Velocity Warnings ──
+                computeVelocityWarnings(batches);
+
                 // ── Regional Risk Map Update ──
                 updateRegionalMap(batches);
 
@@ -1647,7 +1875,7 @@
             });
 
             // Trigger for map filtering
-            window.filterMap = function() {
+            window.filterMap = function () {
                 if (window._tableBatches) {
                     updateRegionalMap(window._tableBatches);
                 }
@@ -2139,7 +2367,7 @@
         window.openPromotionModal = async function (batchId) {
             const batch = criticalBucket.find(b => b.id === batchId) || warningBucket.find(b => b.id === batchId);
             if (!batch) return;
-            
+
             document.getElementById('promo-batch-id').value = batch.id;
             document.getElementById('promo-batch-info').value = `${batch.productName} (Batch: ${batch.batchNumber}) - ${batch._daysLeft} days left`;
             document.getElementById('promo-title').value = '';
@@ -2148,26 +2376,82 @@
             document.getElementById('promo-end').value = '';
             document.getElementById('promo-email-body').value = '';
             document.getElementById('btn-send-promo').disabled = true;
-            
+
             document.getElementById('promo-modal-overlay').classList.add('open');
 
-            // Fetch retailers
+            // Fetch retailers and campaigns
             const select = document.getElementById('promo-retailer-id');
             select.innerHTML = '<option value="">Loading retailers...</option>';
             try {
+                // Fetch retailers
                 const snap = await getDocs(collection(db, 'users'));
-                const retailers = [];
+                const retailerMap = {};
                 snap.forEach(d => {
                     if (d.data().role === 'Retailer') {
-                        retailers.push({id: d.id, ...d.data()});
+                        retailerMap[d.id] = d.data().displayName || d.data().email || d.id;
                     }
                 });
-                if (retailers.length === 0) {
+
+                // Fetch live campaigns for clearance logic
+                const campQuery = query(collection(db, 'live_campaigns'), where("productName", "==", batch.productName));
+                const campSnap = await getDocs(campQuery);
+                const retailerStats = {};
+                campSnap.forEach(d => {
+                    const promo = d.data();
+                    if (promo.retailerID && promo.retailerID !== 'ALL') {
+                        if (!retailerStats[promo.retailerID]) {
+                            retailerStats[promo.retailerID] = { sold: 0, total: 0 };
+                        }
+                        retailerStats[promo.retailerID].sold += (promo.soldUnits || 0);
+                        retailerStats[promo.retailerID].total += ((promo.quantityAvailable || 0) + (promo.soldUnits || 0));
+                    }
+                });
+
+                const retailersList = Object.keys(retailerMap).map(id => {
+                    const stats = retailerStats[id];
+                    let rate = 0;
+                    let hasStats = false;
+                    if (stats && stats.total > 0) {
+                        rate = (stats.sold / stats.total) * 100;
+                        hasStats = true;
+                    }
+                    return { id, name: retailerMap[id], rate, hasStats };
+                });
+
+                retailersList.sort((a, b) => b.rate - a.rate || a.name.localeCompare(b.name));
+
+                if (retailersList.length === 0) {
                     select.innerHTML = '<option value="">No retailers found</option>';
-                } else {
-                    select.innerHTML = '<option value="">Select a retailer...</option>' + 
-                        retailers.map(r => `<option value="${r.id}">${r.displayName || r.email || r.id}</option>`).join('');
+                    return;
                 }
+
+                let html = '<option value="">Select a retail partner...</option>' + 
+                           '<option value="ALL" style="font-weight: bold; color: #0057B8;">All Retailers (Broadcast)</option>';
+
+                const topPerformers = retailersList.filter(r => r.rate >= 50 && r.hasStats);
+                const others = retailersList.filter(r => r.rate < 50 || !r.hasStats);
+
+                if (topPerformers.length > 0) {
+                    html += '<optgroup label="⭐ Top Performers for this Product (Recommended)">';
+                    topPerformers.forEach(r => {
+                        html += `<option value="${r.id}">⭐ ${r.name} (${r.rate.toFixed(0)}% Clearance Success)</option>`;
+                    });
+                    html += '</optgroup>';
+                }
+
+                if (others.length > 0) {
+                    html += '<optgroup label="Other Retailers">';
+                    others.forEach(r => {
+                        let label = r.name;
+                        if (r.hasStats) {
+                            label += ` (${r.rate.toFixed(0)}% Success)`;
+                        }
+                        html += `<option value="${r.id}">${label}</option>`;
+                    });
+                    html += '</optgroup>';
+                }
+
+                select.innerHTML = html;
             } catch (e) {
                 console.error("Error fetching retailers", e);
                 select.innerHTML = '<option value="">Error loading retailers</option>';
@@ -2188,7 +2472,7 @@
             const discountText = discount ? `at a special ${discount}% partner discount` : `at a promotional rate`;
 
             const mockEmail = `Subject: Special Promotion on ${batch.productName}!\n\nDear Retail Partner,\n\nWe are offering an exclusive discount on ${batch.productName} (Batch ${batch.batchNumber}). This batch is approaching its optimal freshness window, and we'd like to extend a special promotion to you.\n\nQuantity Available: ${batch.quantity.toLocaleString()}\nExpiry: ${fmtDate(batch.expiryDate)}\n\nPlease reply to this email or contact your sales representative to secure your order ${discountText}.\n\nBest regards,\nNestlé Logistics Team`;
-            
+
             document.getElementById('promo-email-body').value = mockEmail;
             document.getElementById('btn-send-promo').disabled = false;
         };
@@ -2197,19 +2481,19 @@
             const body = document.getElementById('promo-email-body').value;
             const retailerId = document.getElementById('promo-retailer-id').value;
             const batchId = document.getElementById('promo-batch-id').value;
-            
+
             if (!retailerId) {
                 toast('Please select a retailer', 'error');
                 return;
             }
             if (!body) return;
-            
+
             const btnEl = document.getElementById('btn-send-promo');
             btnEl.disabled = true;
             btnEl.innerHTML = '<span style="animation:spin 0.8s linear infinite;display:inline-block;">⌛</span> Sending…';
-            
+
             const cfg = getEjConfig();
-            
+
             if (cfg.publicKey && cfg.serviceId && cfg.templateId) {
                 try {
                     emailjs.init(cfg.publicKey);
@@ -2226,7 +2510,7 @@
                 // Mock sending delay
                 await new Promise(r => setTimeout(r, 1000));
             }
-            
+
             try {
                 // Save to promotions collection
                 const batch = criticalBucket.find(b => b.id === batchId) || warningBucket.find(b => b.id === batchId);
@@ -2234,7 +2518,31 @@
                 const offeredDiscount = document.getElementById('promo-offered-discount').value;
                 const start = document.getElementById('promo-start').value;
                 const end = document.getElementById('promo-end').value;
-                
+
+                // PB10 & PB11: Create entry in live_campaigns for Retailer Portal & Scorecard
+                await addDoc(collection(db, 'live_campaigns'), {
+                    batchID: batchId,
+                    batchNumber: batch.batchNumber,
+                    productName: batch.productName,
+                    quantityAvailable: batch.quantity || 0,
+                    soldUnits: 0,
+                    retailerID: retailerId || 'ALL',
+                    promotionTitle: title || 'Clearance Sale',
+                    discountPercent: parseInt(offeredDiscount) || 0,
+                    startDate: start,
+                    endDate: end,
+                    status: 'active',
+                    createdAt: serverTimestamp()
+                });
+
+                // Update Batch status to show it's promoted
+                await updateDoc(doc(db, 'batches', batchId), {
+                    status: 'on_promotion',
+                    promotedAt: serverTimestamp(),
+                    promotedQty: batch.quantity || 0
+                });
+
+                // Historical log
                 await addDoc(collection(db, 'promotions'), {
                     batchID: batchId,
                     sku: batch.productName,
@@ -2261,12 +2569,171 @@
                 btnEl.disabled = false;
                 return;
             }
-            
+
             toast('Promotional email sent to retailers successfully!', 'success');
             closePromotionModal();
             btnEl.innerHTML = 'Send to Retailers';
             btnEl.disabled = false;
         };
+
+        // ══════════════════════════════════════════
+        //  PB14 — Predictive Velocity Warning Engine
+        // ══════════════════════════════════════════
+
+        /**
+         * For every batch with >30 days remaining, calculate:
+         *   Required Velocity = Remaining Quantity / Days to Expiry
+         *   Historical Velocity = Sold Quantity / Days Since Batch Created
+         *
+         * If Historical Velocity < Required Velocity, the batch is flagged
+         * as a predictive early warning (amber/warning style).
+         */
+        function computeVelocityWarnings(batches) {
+            const now = new Date();
+            const warnings = [];
+
+            batches.forEach(b => {
+                if (!b.expiryDate || !b.manufacturingDate) return;
+
+                const exp = b.expiryDate.toDate ? b.expiryDate.toDate() : new Date(b.expiryDate);
+                const mfg = b.manufacturingDate.toDate ? b.manufacturingDate.toDate() : new Date(b.manufacturingDate);
+                const daysLeft = Math.round((exp - now) / (1000 * 60 * 60 * 24));
+
+                // Only consider batches with more than 30 days remaining
+                if (daysLeft <= 30) return;
+
+                const remainingQty = b.quantity || 0;
+                if (remainingQty <= 0) return;
+
+                // Days since batch was created/manufactured
+                const daysSinceCreated = Math.max(1, Math.round((now - mfg) / (1000 * 60 * 60 * 24)));
+
+                // Sold quantity: original quantity minus remaining
+                // If originalQuantity is stored, use it; otherwise estimate from initialQuantity
+                const originalQty = b.originalQuantity || b.initialQuantity || remainingQty;
+                const soldQty = Math.max(0, originalQty - remainingQty);
+
+                // Calculate velocities (units per day) - Rounded to whole units
+                const requiredVelocity = Math.ceil(remainingQty / daysLeft);
+                const historicalVelocity = Math.round(soldQty / daysSinceCreated);
+
+                // Flag if selling too slowly
+                if (historicalVelocity < requiredVelocity) {
+                    const velocityGapPct = requiredVelocity > 0
+                        ? Math.round(((requiredVelocity - historicalVelocity) / requiredVelocity) * 100)
+                        : 0;
+
+                    warnings.push({
+                        ...b,
+                        _daysLeft: daysLeft,
+                        _remainingQty: remainingQty,
+                        _soldQty: soldQty,
+                        _daysSinceCreated: daysSinceCreated,
+                        _requiredVelocity: requiredVelocity,
+                        _historicalVelocity: historicalVelocity,
+                        _velocityGapPct: velocityGapPct
+                    });
+                }
+            });
+
+            // Sort by velocity gap descending (most critical first)
+            warnings.sort((a, b) => b._velocityGapPct - a._velocityGapPct);
+
+            renderVelocityWarnings(warnings);
+        }
+
+        function renderVelocityWarnings(warnings) {
+            const tbody = document.getElementById('velocity-warning-tbody');
+            const summaryBadge = document.getElementById('velocity-summary-badge');
+            if (!tbody) return;
+
+            if (summaryBadge) {
+                if (warnings.length > 0) {
+                    summaryBadge.textContent = `${warnings.length} flagged`;
+                    summaryBadge.style.color = '#d97706';
+                    summaryBadge.style.background = 'rgba(245,158,11,0.08)';
+                    summaryBadge.style.borderColor = 'rgba(245,158,11,0.15)';
+                } else {
+                    summaryBadge.textContent = '0 flagged';
+                    summaryBadge.style.color = '#16a34a';
+                    summaryBadge.style.background = 'rgba(34,197,94,0.08)';
+                    summaryBadge.style.borderColor = 'rgba(34,197,94,0.15)';
+                }
+            }
+
+            if (!warnings.length) {
+                tbody.innerHTML = `<tr>
+                    <td colspan="8" class="velocity-empty-state">
+                        <div class="velocity-empty-icon">
+                            <svg style="width:24px;height:24px;color:#22c55e;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        🎉 All batches are selling at adequate velocity — no early warnings
+                    </td>
+                </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = warnings.map(w => {
+                // Velocity ratio for the progress bar (capped at 100%)
+                const velocityRatio = w._requiredVelocity > 0
+                    ? Math.min(100, Math.round((w._historicalVelocity / w._requiredVelocity) * 100))
+                    : 0;
+
+                // Bar color based on how far behind
+                let barColor;
+                if (velocityRatio <= 30) barColor = '#ef4444';
+                else if (velocityRatio <= 60) barColor = '#f59e0b';
+                else barColor = '#fb923c';
+
+                // Gap severity badge
+                let gapClass, gapLabel;
+                if (w._velocityGapPct >= 70) {
+                    gapClass = 'velocity-gap-high';
+                    gapLabel = 'Severe';
+                } else if (w._velocityGapPct >= 40) {
+                    gapClass = 'velocity-gap-moderate';
+                    gapLabel = 'Moderate';
+                } else {
+                    gapClass = 'velocity-gap-low';
+                    gapLabel = 'Mild';
+                }
+
+                const daysColor = w._daysLeft <= 45 ? '#ea580c' : '#d97706';
+
+                return `<tr class="velocity-row">
+                    <td><span class="batch-num">${w.batchNumber}</span></td>
+                    <td style="font-weight:600;color:#0f172a;font-size:14px;">${w.productName}</td>
+                    <td><span style="font-size:13px;font-weight:700;color:${daysColor};font-family:'DM Mono',monospace;">${w._daysLeft}d</span></td>
+                    <td><span class="qty-mono">${w._remainingQty.toLocaleString()}</span></td>
+                    <td>
+                        <div style="display:flex;flex-direction:column;gap:3px;">
+                            <span style="font-family:'DM Mono',monospace;font-size:12.5px;font-weight:600;color:#dc2626;">${w._requiredVelocity} u/day</span>
+                            <span style="font-size:10px;color:#94a3b8;">needed to clear</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                            <span style="font-family:'DM Mono',monospace;font-size:12.5px;font-weight:600;color:#475569;">${w._historicalVelocity} u/day</span>
+                            <div class="velocity-meter">
+                                <div class="velocity-meter-fill" style="width:${velocityRatio}%;background:${barColor};"></div>
+                            </div>
+                            <span style="font-size:10px;color:#94a3b8;">${velocityRatio}% of required</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:#dc2626;">-${w._velocityGapPct}%</span>
+                    </td>
+                    <td>
+                        <span class="velocity-gap-badge ${gapClass}">
+                            <svg style="width:10px;height:10px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                            ${gapLabel}
+                        </span>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
 
     </script>
 </body>

@@ -75,7 +75,8 @@
         }
 
         .ej-field input:focus {
-            border-color: #0057B8;
+            border-color: #0284c7;
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.1);
         }
     </style>
     <script>
@@ -142,8 +143,11 @@
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 relative">
         <main class="flex-1 overflow-y-auto p-8 lg:p-10">
             <div id="tab-offers" class="max-w-4xl">
-                <h2 class="text-2xl font-bold text-slate-800 mb-2">Promotion Offers</h2>
-                <p class="text-slate-500 mb-8">View and accept promotional offers from Nestlé.</p>
+                <div class="flex items-center gap-3 mb-2">
+                    <h2 class="text-2xl font-bold text-slate-800">Smart Procurement Feed</h2>
+                    <span class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full uppercase tracking-widest border border-purple-200">PB15 Personalized</span>
+                </div>
+                <p class="text-slate-500 mb-8">Curated promotional offers tailored to your store's historical sales velocity and capacity.</p>
                 <div id="offers-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <!-- Offers will be populated here -->
                 </div>
@@ -219,7 +223,7 @@
             </div>
 
             <div style="display:flex;gap:10px;margin-top:20px;">
-                <button id="btn-submit-accept" onclick="submitAcceptPromotion()" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.25);transition:all 0.2s ease;">Confirm & Accept</button>
+                <button id="btn-submit-accept" onclick="submitAcceptPromotion()" style="flex:1;padding:11px;border-radius:12px;border:none;background:#10b981;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,0.25);transition:all 0.2s ease;">Confirm & Accept</button>
             </div>
         </div>
     </div>
@@ -227,7 +231,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
@@ -270,7 +274,7 @@
                 return;
             }
 
-            const q = query(collection(db, 'live_campaigns'), where('retailerID', '==', user.uid));
+            const q = query(collection(db, 'live_campaigns'), where('retailerID', 'in', [user.uid, 'ALL']));
             onSnapshot(q, async snap => {
                 const offersContainer = document.getElementById('offers-container');
                 const liveContainer = document.getElementById('live-container');
@@ -284,6 +288,41 @@
                 let hasOffers = false;
                 let hasLive = false;
 
+                // PB15: Fetch historical data for personalization
+                const historyQ = query(collection(db, 'live_campaigns'), where('retailerID', '==', user.uid), where('status', 'in', ['ended', 'reserved']));
+                const historySnap = await getDocs(historyQ);
+                
+                const userPreferences = {};
+                let totalPastClaims = 0;
+
+                historySnap.forEach(d => {
+                    const data = d.data();
+                    const prodName = data.productName || '';
+                    const category = prodName.split(' ')[0] || 'General'; // Simplified category heuristic
+                    
+                    if (!userPreferences[category]) {
+                        userPreferences[category] = { claims: 0, totalVelocity: 0, count: 0 };
+                    }
+                    userPreferences[category].claims++;
+                    totalPastClaims++;
+                    
+                    if (data.quantityAvailable > 0) {
+                        const velocity = (data.soldUnits || 0) / data.quantityAvailable;
+                        userPreferences[category].totalVelocity += velocity;
+                        userPreferences[category].count++;
+                    }
+                });
+
+                const affinity = {};
+                for (let cat in userPreferences) {
+                    const prefs = userPreferences[cat];
+                    const avgVelocity = prefs.count > 0 ? prefs.totalVelocity / prefs.count : 0.2;
+                    const claimRatio = totalPastClaims > 0 ? prefs.claims / totalPastClaims : 0;
+                    affinity[cat] = (avgVelocity * 0.7) + (claimRatio * 0.3); 
+                }
+
+                let activeOffersList = [];
+
                 for (const d of snap.docs) {
                     const offer = d.data();
                     const offerId = d.id;
@@ -291,28 +330,67 @@
 
                     if (offer.status === 'active') {
                         hasOffers = true;
-                        renderOfferCard(offer, offerId, offersContainer);
+                        
+                        // PB15: Calculate Match Score
+                        const category = (offer.productName || '').split(' ')[0] || 'General';
+                        let matchScore = affinity[category] || 0.1; // Default low affinity if never bought
+                        
+                        // Boost score if expiring soon (urgency)
+                        const daysLeft = offer.endDate ? Math.ceil((new Date(offer.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 30;
+                        if (daysLeft < 10) matchScore += 0.2;
+                        
+                        // Calculate Smart Quantity Suggestion
+                        const maxQty = offer.quantityAvailable || 0;
+                        const avgVelocityForCategory = (userPreferences[category] && userPreferences[category].count > 0) 
+                            ? userPreferences[category].totalVelocity / userPreferences[category].count 
+                            : 0.5; // Default 50%
+                        
+                        // Smart Quantity: Based on avg velocity they achieved in this category
+                        let smartQty = Math.max(1, Math.round(maxQty * avgVelocityForCategory));
+                        if (smartQty > maxQty) smartQty = maxQty;
+                        
+                        offer.smartScore = matchScore;
+                        offer.smartCategory = category;
+                        offer.smartQuantity = smartQty;
+
+                        activeOffersList.push({ offer, offerId });
                     } else if (offer.status === 'reserved') {
                         hasLive = true;
                         await renderLiveCard(offer, offerId, liveContainer);
                     }
                 }
 
+                // PB15: Sort offers by Smart Score descending
+                activeOffersList.sort((a, b) => b.offer.smartScore - a.offer.smartScore);
+                
+                activeOffersList.forEach((item, index) => {
+                    const isTopMatch = index === 0 && item.offer.smartScore > 0.1; // Highlight the top match if score > 0.1
+                    renderOfferCard(item.offer, item.offerId, offersContainer, isTopMatch);
+                });
+
                 noOffers.style.display = hasOffers ? 'none' : 'flex';
                 noLive.style.display = hasLive ? 'none' : 'flex';
             });
         });
 
-        function renderOfferCard(offer, id, container) {
+        function renderOfferCard(offer, id, container, isTopMatch = false) {
             const discount = offer.discountPercent || 0;
             const qty = offer.quantityAvailable || 0;
             
+            const badgeHtml = isTopMatch 
+                ? `<div class="mb-3 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-lg flex items-center gap-2">
+                       <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                       <span class="text-[11px] font-bold text-purple-700">Top Match: Based on past success with ${offer.smartCategory}</span>
+                   </div>`
+                : '';
+
             const card = document.createElement('div');
-            card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col";
+            card.className = `bg-white p-6 rounded-2xl shadow-sm border ${isTopMatch ? 'border-purple-200 ring-1 ring-purple-50' : 'border-slate-100'} flex flex-col relative transition-all hover:shadow-md`;
             card.innerHTML = `
+                ${badgeHtml}
                 <div class="mb-4">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full uppercase tracking-wider">New Offer</span>
+                        <span class="inline-block px-3 py-1 ${isTopMatch ? 'bg-purple-100 text-purple-800' : 'bg-blue-50 text-blue-700'} text-[10px] font-bold rounded-full uppercase tracking-wider">${isTopMatch ? 'Recommended' : 'New Offer'}</span>
                         <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">${discount}% Off</span>
                     </div>
                     <h3 class="text-lg font-bold text-slate-800">${offer.productName || 'N/A'}</h3>
@@ -423,9 +501,11 @@
             
             const qtyInput = document.getElementById('claimed-quantity');
             const maxQty = offer.quantityAvailable || 0;
-            qtyInput.value = maxQty;
+            const suggestedQty = offer.smartQuantity || maxQty;
+            
+            qtyInput.value = suggestedQty;
             qtyInput.max = maxQty;
-            document.getElementById('max-qty-label').textContent = `of ${maxQty.toLocaleString()} available`;
+            document.getElementById('max-qty-label').innerHTML = `of ${maxQty.toLocaleString()} available<br><span style="color:#8b5cf6;font-size:10px;font-weight:700;">★ Smart Suggestion: ${suggestedQty.toLocaleString()} units</span>`;
             
             document.getElementById('accept-modal-overlay').classList.add('open');
         };
@@ -457,20 +537,78 @@
                     return;
                 }
 
-                // 1. Mark live_campaign as reserved (locked) and update with claimed quantity
-                await updateDoc(doc(db, 'live_campaigns', id), {
-                    status: 'reserved',
-                    reservedAt: new Date(),
-                    reservedByUid: auth.currentUser?.uid || '',
-                    quantityAvailable: claimedQty // Update the campaign to the actual claimed amount
-                });
-
-                // 2. Increment reservedQty on the batch document using stored batchID
-                if (offer && offer.batchID) {
-                    await updateDoc(doc(db, 'batches', offer.batchID), {
-                        reservedQty: increment(claimedQty),
-                        lastReservedAt: new Date()
+                if (offer.retailerID === 'ALL') {
+                    // It's a broadcast campaign
+                    const remainingQty = offer.quantityAvailable - claimedQty;
+                    
+                    // Create a NEW reserved campaign for this specific retailer
+                    await addDoc(collection(db, 'live_campaigns'), {
+                        batchID: offer.batchID || null,
+                        batchNumber: offer.batchNumber || null,
+                        productName: offer.productName || null,
+                        quantityAvailable: claimedQty,
+                        retailerID: auth.currentUser?.uid || '',
+                        promotionTitle: offer.promotionTitle || '',
+                        discountPercent: offer.discountPercent || 0,
+                        startDate: offer.startDate || '',
+                        endDate: offer.endDate || '',
+                        status: 'reserved',
+                        soldUnits: 0,
+                        createdAt: new Date(),
+                        reservedAt: new Date(),
+                        reservedByUid: auth.currentUser?.uid || ''
                     });
+
+                    // Update the ALL campaign's quantity or close it
+                    if (remainingQty > 0) {
+                        await updateDoc(doc(db, 'live_campaigns', id), {
+                            quantityAvailable: increment(-claimedQty)
+                        });
+                    } else {
+                        // Fully claimed
+                        await updateDoc(doc(db, 'live_campaigns', id), {
+                            status: 'ended',
+                            quantityAvailable: 0
+                        });
+                    }
+
+                    // Update batch reservedQty
+                    if (offer.batchID) {
+                        const batchRef = doc(db, 'batches', offer.batchID);
+                        await updateDoc(batchRef, {
+                            reservedQty: increment(claimedQty),
+                            lastReservedAt: new Date()
+                        });
+                    }
+                } else {
+                    // 1. Mark live_campaign as reserved (locked) and update with claimed quantity
+                    await updateDoc(doc(db, 'live_campaigns', id), {
+                        status: 'reserved',
+                        reservedAt: new Date(),
+                        reservedByUid: auth.currentUser?.uid || '',
+                        quantityAvailable: claimedQty // Update the campaign to the actual claimed amount
+                    });
+
+                    // 2. Free up the unaccepted quantity back to the batch
+                    if (offer && offer.batchID) {
+                        const unacceptedQty = offer.quantityAvailable - claimedQty;
+                        const batchRef = doc(db, 'batches', offer.batchID);
+                        const batchSnap = await getDoc(batchRef);
+                        
+                        if (batchSnap.exists()) {
+                            const updates = {
+                                reservedQty: increment(claimedQty),
+                                lastReservedAt: new Date()
+                            };
+                            
+                            if (unacceptedQty > 0) {
+                                updates.promotedQty = increment(-unacceptedQty);
+                                updates.status = 'escalated'; // Return to queue so SM can offer the rest
+                            }
+                            
+                            await updateDoc(batchRef, updates);
+                        }
+                    }
                 }
 
                 closeAcceptModal();

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestlé SSAMS — Retailer Scorecard</title>
+    <meta name="description" content="Retailer Clearance Scorecard" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        /* ── Core Styles matching Dashboard ── */
+        body {
+            background: #f0f4f8;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .hero-banner {
+            position: relative;
+            background: linear-gradient(135deg, #001a4d 0%, #003087 40%, #0057B8 70%, #00AEEF 100%);
+            border-radius: 24px;
+            overflow: hidden;
+            padding: 32px 36px;
+            color: #fff;
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            left: -10%;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, rgba(0, 174, 239, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            right: 5%;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Glass containers */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 48, 135, 0.07);
+        }
+
+        /* Section label */
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #94a3b8;
+            margin-bottom: 14px;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 14px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            background: rgba(248, 250, 252, 0.6);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .data-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            color: #334155;
+            vertical-align: middle;
+        }
+        .data-table tbody tr {
+            transition: background 0.2s;
+        }
+        .data-table tbody tr:hover {
+            background: rgba(248, 250, 252, 0.8);
+        }
+
+        .qty-mono {
+            font-family: 'DM Mono', monospace;
+            font-weight: 500;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .medal-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-weight: 800;
+            font-size: 12px;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .gold { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .silver { background: linear-gradient(135deg, #94a3b8, #64748b); }
+        .bronze { background: linear-gradient(135deg, #b45309, #78350f); }
+        .rank { 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            color: #64748b;
+            font-weight: 700;
+            font-size: 12px;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- App Shell -->
+    <div id="app-shell" class="flex h-screen overflow-hidden">
+        <div id="sidebar-slot"></div>
+
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div id="header-slot"></div>
+
+            <main class="flex-1 overflow-y-auto" style="padding:24px 28px;display:flex;flex-direction:column;gap:24px;">
+                <!-- Hero Banner -->
+                <div class="hero-banner shadow-2xl">
+                    <div style="position:relative;z-index:1;">
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:rgba(255,255,255,0.85);margin-bottom:12px;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block;box-shadow:0 0 6px rgba(245,158,11,0.8);"></span>
+                            Performance Metrics
+                        </div>
+                        <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;margin-bottom:8px;">
+                            Retailer Clearance Scorecard
+                        </h1>
+                        <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">
+                            PB12 · Ranking retailers by clearance success rate on promotional batches.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Leaderboard Section -->
+                <div>
+                    <div class="section-label">Retailer Leaderboard</div>
+                    <div class="glass-panel">
+                        <div style="padding:18px 24px 16px;border-bottom:1px solid rgba(226,232,240,0.7); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Top Performers</h3>
+                                <p style="font-size:12px;color:#94a3b8;margin-top:2px;">Based on total promotional stock offered vs. stock successfully sold.</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Filter By Product:</label>
+                                <select id="filter-product" style="font-size: 12px; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; outline: none; min-width: 180px;" onchange="renderScorecard()">
+                                    <option value="all">All Products</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 80px; text-align: center;">Rank</th>
+                                        <th>Retailer Name</th>
+                                        <th>Total Promotional Qty</th>
+                                        <th>Total Sold Qty</th>
+                                        <th>Success Rate</th>
+                                        <th>Performance Bar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scorecard-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align:center;padding:40px 18px;color:#94a3b8;font-size:14px;">
+                                            <svg style="width:18px;height:18px;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            Calculating success rates...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Firebase Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { buildSidebar, buildHeader, toast, startClock } from './sidebar.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let allCampaigns = [];
+        let retailerMap = {};
+        let productSet = new Set();
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+
+            const role = sessionStorage.getItem('user_role') || '';
+            const roleLower = role.toLowerCase();
+            
+            if (roleLower === 'retailer') {
+                sessionStorage.setItem('access_denied_msg', 'Access Denied: Managers Only');
+                window.location.href = 'retailer_portal.html';
+                return;
+            }
+
+            // Inject layout
+            document.getElementById('sidebar-slot').innerHTML = buildSidebar('retailer_scorecard');
+            document.getElementById('header-slot').innerHTML = buildHeader('Retailer Scorecard', 'Retailer Clearance Metrics');
+            startClock();
+            
+            await loadRetailers();
+            listenForCampaigns();
+        });
+
+        async function loadRetailers() {
+            try {
+                const snap = await getDocs(collection(db, 'users'));
+                snap.forEach(d => {
+                    if (d.data().role === 'Retailer') {
+                        retailerMap[d.id] = d.data().displayName || d.data().email || d.id;
+                    }
+                });
+            } catch (e) {
+                console.error("Error fetching retailers", e);
+                toast('Error loading retailers', 'error');
+            }
+        }
+
+        function listenForCampaigns() {
+            const q = query(collection(db, 'live_campaigns'));
+            onSnapshot(q, (snapshot) => {
+                allCampaigns = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    allCampaigns.push(data);
+                    if (data.productName) {
+                        productSet.add(data.productName);
+                    }
+                });
+                
+                updateProductFilter();
+                window.renderScorecard();
+            }, (error) => {
+                console.error("Error fetching campaigns:", error);
+                document.getElementById('scorecard-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#dc2626;">Failed to load data.</td></tr>`;
+            });
+        }
+
+        function updateProductFilter() {
+            const select = document.getElementById('filter-product');
+            const currentValue = select.value;
+            
+            let html = '<option value="all">All Products</option>';
+            Array.from(productSet).sort().forEach(prod => {
+                html += `<option value="${prod}">${prod}</option>`;
+            });
+            
+            select.innerHTML = html;
+            if (productSet.has(currentValue)) {
+                select.value = currentValue;
+            }
+        }
+
+        window.renderScorecard = function() {
+            const filterProd = document.getElementById('filter-product').value;
+            const tbody = document.getElementById('scorecard-tbody');
+            
+            const retailerStats = {};
+
+            allCampaigns.forEach(c => {
+                // Filter
+                if (filterProd !== 'all' && c.productName !== filterProd) return;
+                
+                // Active/Reserved campaigns only? Usually we include ended ones to measure overall success too.
+                // We'll include all campaigns so the score is historically accurate
+                
+                if (!retailerStats[c.retailerID]) {
+                    retailerStats[c.retailerID] = { sold: 0, total: 0 };
+                }
+                retailerStats[c.retailerID].sold += (c.soldUnits || 0);
+                retailerStats[c.retailerID].total += (c.quantityAvailable || 0);
+            });
+
+            const leaderboard = [];
+            for (const [rid, stats] of Object.entries(retailerStats)) {
+                if (stats.total > 0) {
+                    const rate = (stats.sold / stats.total) * 100;
+                    leaderboard.push({
+                        id: rid,
+                        name: retailerMap[rid] || 'Unknown Retailer',
+                        rate: rate,
+                        sold: stats.sold,
+                        total: stats.total
+                    });
+                }
+            }
+
+            if (leaderboard.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 18px;font-size:13.5px;color:#94a3b8;">No promotion data available for the selected filter.</td></tr>`;
+                return;
+            }
+
+            // Sort by rate DESC, then by total DESC (tie breaker)
+            leaderboard.sort((a, b) => b.rate - a.rate || b.total - a.total);
+
+            let html = '';
+            leaderboard.forEach((item, index) => {
+                let rankHtml = '';
+                if (index === 0) {
+                    rankHtml = `<div class="medal-badge gold">1</div>`;
+                } else if (index === 1) {
+                    rankHtml = `<div class="medal-badge silver">2</div>`;
+                } else if (index === 2) {
+                    rankHtml = `<div class="medal-badge bronze">3</div>`;
+                } else {
+                    rankHtml = `<div class="rank">${index + 1}</div>`;
+                }
+
+                const rateFormatted = item.rate.toFixed(1);
+                const barColor = item.rate >= 75 ? '#10b981' : (item.rate >= 40 ? '#f59e0b' : '#ef4444');
+
+                html += `
+                    <tr>
+                        <td style="text-align: center;">${rankHtml}</td>
+                        <td style="font-weight:600; color:#1e293b;">${item.name}</td>
+                        <td><span class="qty-mono">${item.total.toLocaleString()}</span></td>
+                        <td><span class="qty-mono text-blue-600">${item.sold.toLocaleString()}</span></td>
+                        <td style="font-weight: 700; color: ${barColor};">${rateFormatted}%</td>
+                        <td>
+                            <div style="width: 100%; max-width: 150px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                <div style="width: ${item.rate}%; height: 100%; background: ${barColor}; border-radius: 4px; transition: width 0.5s ease;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        };
+
+    </script>
+</body>
+</html>

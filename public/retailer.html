@@ -295,7 +295,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, onSnapshot, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, query, onSnapshot, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
@@ -509,28 +509,94 @@
                     <h4 class="font-bold text-slate-800 text-sm mb-1">${p.promotionTitle}</h4>
                     <p class="text-[11px] text-slate-500 mb-3">${p.productName} (Standard Nestlé Promo)</p>
                     
-                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-3">
                         <span>Starts: ${p.startDate}</span>
                         <span>Ends: ${p.endDate}</span>
                     </div>
                     
-                    <button class="btn-claim" onclick="claimPromo('${p.id}')">Claim This Offer</button>
+                    <div class="mt-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <label class="form-label" style="margin-bottom:6px;">Request Quantity (Max: ${p.quantityAvailable})</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="promo-qty-${p.id}" class="form-input" style="padding: 8px 12px; height: 36px;" max="${p.quantityAvailable}" min="1" value="${p.quantityAvailable}" oninput="if(this.value > ${p.quantityAvailable}) this.value = ${p.quantityAvailable};" />
+                            <button class="btn-claim" style="margin-top:0; height: 36px; padding: 0 16px; width: auto; flex-shrink: 0;" onclick="claimPromo('${p.id}')" id="btn-claim-${p.id}">Accept Offer</button>
+                        </div>
+                    </div>
                 </div>
             `).join('');
         }
 
-        window.claimPromo = function(promoId) {
+        window.claimPromo = async function(promoId) {
             const promo = activePromotions.find(p => p.id === promoId);
             if (!promo) return;
 
-            selectedPromoId = promo.id;
-            selectedPromoDiscount = promo.discountPercent;
+            const qtyInput = $(`promo-qty-${promoId}`);
+            const btn = $(`btn-claim-${promoId}`);
             
-            // Auto-select product and focus quantity
-            selectProduct(promo.productName);
-            $('order-qty').placeholder = `Max available: ${promo.quantityAvailable}`;
-            $('order-qty').value = promo.quantityAvailable; // Default to full batch if they want
-            showToast(`Applied ${promo.discountPercent}% discount for ${promo.productName}`, 'success');
+            if (!qtyInput || !btn) return;
+
+            const qty = parseInt(qtyInput.value, 10);
+
+            if (isNaN(qty) || qty < 1) {
+                showToast('Please enter a valid quantity of at least 1.', 'error');
+                return;
+            }
+            if (qty > promo.quantityAvailable) {
+                showToast(`Maximum available is ${promo.quantityAvailable} units.`, 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+
+            try {
+                const location = $('preferred-location') ? $('preferred-location').value : 'Colombo-01';
+
+                // 1. Create retailer request
+                await addDoc(collection(db, 'retailer_requests'), {
+                    retailerName: currentRetailerName,
+                    requesterUid: currentUser.uid,
+                    productName: promo.productName,
+                    quantityRequested: qty,
+                    preferredLocation: location,
+                    promotionID: promo.id,
+                    appliedDiscount: promo.discountPercent,
+                    status: 'pending',
+                    submittedAt: serverTimestamp()
+                });
+
+                const remainingQty = promo.quantityAvailable - qty;
+
+                // 2. Handle the "Split"
+                if (remainingQty > 0) {
+                    // Update campaign to reserved for the claimed amount
+                    await updateDoc(doc(db, 'live_campaigns', promo.id), {
+                        quantityAvailable: qty,
+                        status: 'reserved'
+                    });
+
+                    // Return the remaining units to the Sales Manager's queue
+                    if (promo.batchID) {
+                        await updateDoc(doc(db, 'batches', promo.batchID), {
+                            quantity: remainingQty,
+                            status: 'escalated'
+                        });
+                    }
+                } else {
+                    // Fully claimed
+                    await updateDoc(doc(db, 'live_campaigns', promo.id), {
+                        quantityAvailable: qty,
+                        status: 'reserved'
+                    });
+                }
+
+                showToast(`Successfully claimed ${qty} units of ${promo.productName}`, 'success');
+                
+            } catch (e) {
+                console.error('Error claiming promotion:', e);
+                showToast('Error claiming promotion: ' + e.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Accept Offer';
+            }
         };
 
         // ── Order History ──

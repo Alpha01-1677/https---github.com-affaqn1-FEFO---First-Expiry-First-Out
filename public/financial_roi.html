@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nestlé SSAMS — Product Rescue Dashboard</title>
+    <meta name="description" content="Product rescue dashboard comparing volume rescued via promotions vs volume lost to expiration." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        body { background: #f0f4f8; font-family: 'DM Sans', sans-serif; }
+
+        .hero-banner {
+            position: relative;
+            background: linear-gradient(135deg, #001a4d 0%, #003087 40%, #0057B8 70%, #00AEEF 100%);
+            border-radius: 24px;
+            overflow: hidden;
+            padding: 32px 36px;
+            color: #fff;
+        }
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -40%; left: -10%;
+            width: 320px; height: 320px;
+            background: radial-gradient(circle, rgba(0,174,239,0.18) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            bottom: -30%; right: 5%;
+            width: 240px; height: 240px;
+            background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 65%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .glass-panel {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,48,135,0.07);
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #94a3b8;
+            margin-bottom: 14px;
+        }
+
+        /* Metric Cards */
+        .metric-card {
+            border-radius: 20px;
+            padding: 28px 32px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s;
+        }
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 48px rgba(0,0,0,0.12);
+        }
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: -30%; right: -10%;
+            width: 180px; height: 180px;
+            border-radius: 50%;
+            opacity: 0.12;
+        }
+
+        .card-rescued {
+            background: linear-gradient(135deg, #065f46, #059669);
+            color: #fff;
+            box-shadow: 0 8px 32px rgba(5,150,105,0.25);
+        }
+        .card-rescued::before { background: #fff; }
+
+        .card-lost {
+            background: linear-gradient(135deg, #7f1d1d, #dc2626);
+            color: #fff;
+            box-shadow: 0 8px 32px rgba(220,38,38,0.25);
+        }
+        .card-lost::before { background: #fff; }
+
+        .card-rate {
+            background: linear-gradient(135deg, #1e1b4b, #4338ca);
+            color: #fff;
+            box-shadow: 0 8px 32px rgba(67,56,202,0.25);
+        }
+        .card-rate::before { background: #fff; }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            font-family: 'DM Mono', monospace;
+            line-height: 1;
+        }
+        .metric-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            opacity: 0.75;
+            margin-top: 8px;
+        }
+        .metric-sub {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+        .metric-icon {
+            position: absolute;
+            bottom: 20px; right: 24px;
+            font-size: 48px;
+            opacity: 0.12;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+
+        /* Quarter filter */
+        .quarter-btn {
+            padding: 6px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+        .quarter-btn.active, .quarter-btn:hover {
+            background: linear-gradient(135deg, #0057B8, #003087);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 3px 10px rgba(0,87,184,0.25);
+        }
+    </style>
+</head>
+<body>
+    <div id="app-shell" class="flex h-screen overflow-hidden">
+        <div id="sidebar-slot"></div>
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div id="header-slot"></div>
+
+            <main class="flex-1 overflow-y-auto" style="padding:24px 28px;display:flex;flex-direction:column;gap:24px;">
+
+                <!-- Hero Banner -->
+                <div class="hero-banner shadow-2xl">
+                    <div style="position:relative;z-index:1;">
+                        <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:rgba(255,255,255,0.85);margin-bottom:12px;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#00AEEF;display:inline-block;box-shadow:0 0 6px rgba(0,174,239,0.8);"></span>
+                            Supply Chain Director View
+                        </div>
+                        <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;margin-bottom:8px;">
+                            Product Rescue Dashboard
+                        </h1>
+                        <p style="font-size:13.5px;opacity:0.75;letter-spacing:-0.01em;">
+                            PB13 · Analysis comparing total product volume rescued via B2B promotions vs. volume lost to expiration.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Filters: Quarter & Mode -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Filter Quarter:</span>
+                        <button class="quarter-btn active" data-q="current" onclick="setQuarter('current', this)">Current Quarter</button>
+                        <button class="quarter-btn" data-q="all" onclick="setQuarter('all', this)">All Time</button>
+                        <button class="quarter-btn" data-q="q1" onclick="setQuarter('q1', this)">Q1</button>
+                        <button class="quarter-btn" data-q="q2" onclick="setQuarter('q2', this)">Q2</button>
+                        <button class="quarter-btn" data-q="q3" onclick="setQuarter('q3', this)">Q3</button>
+                        <button class="quarter-btn" data-q="q4" onclick="setQuarter('q4', this)">Q4</button>
+                    </div>
+                </div>
+
+                <!-- Summary Metric Cards -->
+                <div>
+                    <div class="section-label">Rescue Summary</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">
+
+                        <div class="metric-card card-rescued">
+                            <div class="metric-label" id="rescued-label">📦 Total Volume Rescued</div>
+                            <div class="metric-value" id="card-rescued">—</div>
+                            <div class="metric-sub" id="card-rescued-count">Loading…</div>
+                            <div class="metric-icon">✅</div>
+                        </div>
+
+                        <div class="metric-card card-lost">
+                            <div class="metric-label" id="lost-label">🔴 Total Volume Lost</div>
+                            <div class="metric-value" id="card-lost">—</div>
+                            <div class="metric-sub" id="card-lost-count">Loading…</div>
+                            <div class="metric-icon">❌</div>
+                        </div>
+
+                        <div class="metric-card card-rate">
+                            <div class="metric-label">📊 Rescue Rate</div>
+                            <div class="metric-value" id="card-rate">—</div>
+                            <div class="metric-sub" id="card-rate-sub">% of at-risk volume recovered</div>
+                            <div class="metric-icon">📈</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Bar Chart -->
+                <div>
+                    <div class="section-label">Volume Comparison — Rescued vs. Lost</div>
+                    <div class="glass-panel">
+                        <div style="padding:20px 24px 16px;border-bottom:1px solid rgba(226,232,240,0.7);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                            <div>
+                                <h3 id="chart-title" style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Product Volume: Rescued vs. Lost</h3>
+                                <p style="font-size:12px;color:#94a3b8;margin-top:2px;">Batches with <code style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;">completed_promotion</code> vs <code style="font-size:11px;background:#f1f5f9;padding:1px 6px;border-radius:4px;">expired</code> status</p>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:16px;font-size:12px;font-weight:600;">
+                                <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#059669;display:inline-block;"></span>Rescued</span>
+                                <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#dc2626;display:inline-block;"></span>Lost</span>
+                            </div>
+                        </div>
+                        <div style="padding:24px;position:relative;min-height:340px;display:flex;align-items:center;justify-content:center;">
+                            <div id="chart-loading" style="text-align:center;color:#94a3b8;font-size:13.5px;">
+                                <span class="spin">⏳</span> Loading volume data…
+                            </div>
+                            <canvas id="roi-chart" style="display:none;max-height:320px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Breakdown Table -->
+                <div>
+                    <div class="section-label">Batch Breakdown</div>
+                    <div class="glass-panel">
+                        <div style="padding:18px 24px 16px;border-bottom:1px solid rgba(226,232,240,0.7);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <h3 style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Detailed Batch Records</h3>
+                                <p style="font-size:12px;color:#94a3b8;margin-top:2px;">Individual batch volume contributions</p>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <select id="table-filter" onchange="renderTable()" style="font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;outline:none;cursor:pointer;">
+                                    <option value="all">All Batches</option>
+                                    <option value="completed_promotion">Rescued Only</option>
+                                    <option value="expired">Lost Only</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+                                <thead>
+                                    <tr style="background:rgba(248,250,252,0.6);">
+                                        <th style="text-align:left;padding:13px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;border-bottom:1px solid rgba(226,232,240,0.8);">Batch #</th>
+                                        <th style="text-align:left;padding:13px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;border-bottom:1px solid rgba(226,232,240,0.8);">Product</th>
+                                        <th style="text-align:right;padding:13px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;border-bottom:1px solid rgba(226,232,240,0.8);">Volume (Units)</th>
+                                        <th style="text-align:center;padding:13px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;border-bottom:1px solid rgba(226,232,240,0.8);">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="breakdown-tbody">
+                                    <tr><td colspan="4" style="text-align:center;padding:40px;color:#94a3b8;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { buildSidebar, buildHeader, toast, startClock } from './sidebar.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let allBatches = [];
+        let currentQuarter = 'current';
+        let roiChart = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+            const role = (sessionStorage.getItem('user_role') || '').toLowerCase();
+            if (role === 'retailer') { window.location.href = 'retailer_portal.html'; return; }
+
+            document.getElementById('sidebar-slot').innerHTML = buildSidebar('financial_roi');
+            document.getElementById('header-slot').innerHTML = buildHeader('Product Rescue Dashboard', 'PB13 · Analysis of the B2B Clearance Strategy');
+            startClock();
+
+            await loadData();
+        });
+
+        async function loadData() {
+            try {
+                const snap = await getDocs(collection(db, 'batches'));
+                allBatches = [];
+                snap.forEach(d => allBatches.push({ id: d.id, ...d.data() }));
+                renderAll();
+            } catch (err) {
+                console.error(err);
+                toast('Failed to load batch data.', 'error');
+                document.getElementById('chart-loading').textContent = 'Error loading data.';
+            }
+        }
+
+        function getQuarterRange(q) {
+            const now = new Date();
+            const yr = now.getFullYear();
+            if (q === 'all') return { start: new Date(0), end: new Date('2099-12-31') };
+            if (q === 'current') {
+                const m = now.getMonth();
+                const qStart = Math.floor(m / 3) * 3;
+                return { start: new Date(yr, qStart, 1), end: new Date(yr, qStart + 3, 0) };
+            }
+            const map = { q1: [0,2], q2: [3,5], q3: [6,8], q4: [9,11] };
+            const [sm, em] = map[q];
+            return { start: new Date(yr, sm, 1), end: new Date(yr, em + 1, 0) };
+        }
+
+        function batchDate(b) {
+            // Use expiryDate or updatedAt to place in a quarter
+            const raw = b.updatedAt || b.expiryDate || b.createdAt;
+            if (!raw) return new Date();
+            if (raw.toDate) return raw.toDate();
+            return new Date(raw);
+        }
+
+        function renderAll() {
+            const { start, end } = getQuarterRange(currentQuarter);
+
+            const filtered = allBatches.filter(b => {
+                const d = batchDate(b);
+                return d >= start && d <= end;
+            });
+
+            // Include 'on_promotion' as rescued volume to show potential rescue
+            const rescued = filtered.filter(b => b.status === 'completed_promotion' || b.status === 'on_promotion');
+            const lost = filtered.filter(b => b.status === 'expired');
+
+            const rescuedMetric = rescued.reduce((s, b) => s + (parseFloat(b.quantity) || 0), 0);
+            const lostMetric = lost.reduce((s, b) => s + (parseFloat(b.quantity) || 0), 0);
+            const total = rescuedMetric + lostMetric;
+            const rate = total > 0 ? ((rescuedMetric / total) * 100).toFixed(1) : '0.0';
+
+            // Update metric cards
+            document.getElementById('card-rescued').textContent = rescuedMetric.toLocaleString() + ' Units';
+            document.getElementById('card-rescued-count').textContent = `${rescued.length} batch${rescued.length !== 1 ? 'es' : ''} successfully promoted or active`;
+            document.getElementById('card-lost').textContent = lostMetric.toLocaleString() + ' Units';
+            document.getElementById('card-lost-count').textContent = `${lost.length} batch${lost.length !== 1 ? 'es' : ''} expired without recovery`;
+            document.getElementById('card-rate').textContent = rate + '%';
+
+            // Update Labels
+            document.getElementById('rescued-label').textContent = '📦 Units Rescued (Inc. Active)';
+            document.getElementById('lost-label').textContent = '🔴 Total Units Lost';
+            document.getElementById('chart-title').textContent = 'Product Volume: Rescued vs. Lost';
+
+            renderChart(rescuedMetric, lostMetric);
+            renderTable();
+
+            // Store for table use
+            window._rescuedBatches = rescued;
+            window._lostBatches = lost;
+            window._allFilteredBatches = [...rescued, ...lost];
+        }
+
+        function renderChart(rescuedVal, lostVal) {
+            document.getElementById('chart-loading').style.display = 'none';
+            const canvas = document.getElementById('roi-chart');
+            canvas.style.display = 'block';
+
+            if (roiChart) roiChart.destroy();
+
+            const ctx = canvas.getContext('2d');
+            roiChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Total Units Rescued', 'Total Units Lost'],
+                    datasets: [{
+                        label: 'Product Units',
+                        data: [rescuedVal, lostVal],
+                        backgroundColor: [
+                            'rgba(5, 150, 105, 0.85)',
+                            'rgba(220, 38, 38, 0.85)'
+                        ],
+                        borderColor: [
+                            'rgba(4, 120, 87, 1)',
+                            'rgba(185, 28, 28, 1)'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 12,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ' ' + ctx.parsed.y.toLocaleString() + ' Units'
+                            },
+                            backgroundColor: 'rgba(15,23,42,0.9)',
+                            padding: 14,
+                            cornerRadius: 10,
+                            titleFont: { size: 13, weight: '600' },
+                            bodyFont: { size: 13, family: "'DM Mono', monospace" }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 13, weight: '600' }, color: '#475569' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(226,232,240,0.7)' },
+                            ticks: {
+                                callback: v => (v >= 1000 ? (v/1000).toFixed(0)+'k' : v),
+                                font: { size: 12, family: "'DM Mono', monospace" },
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.renderTable = function() {
+            const filter = document.getElementById('table-filter').value;
+            const { start, end } = getQuarterRange(currentQuarter);
+
+            let rows = allBatches.filter(b => {
+                const d = batchDate(b);
+                if (d < start || d > end) return false;
+                if (filter === 'all') return b.status === 'completed_promotion' || b.status === 'on_promotion' || b.status === 'expired';
+                if (filter === 'completed_promotion') return b.status === 'completed_promotion' || b.status === 'on_promotion';
+                return b.status === filter;
+            });
+
+            rows.sort((a, b) => (parseFloat(b.quantity) || 0) - (parseFloat(a.quantity) || 0));
+
+            const tbody = document.getElementById('breakdown-tbody');
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#94a3b8;font-size:13.5px;">No matching batches found for this period.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(b => {
+                const isRescued = b.status === 'completed_promotion' || b.status === 'on_promotion';
+                const label = b.status === 'on_promotion' ? 'Active Promo' : (isRescued ? 'Rescued' : 'Lost');
+                
+                let badgeStyle = '';
+                if (b.status === 'on_promotion') {
+                    badgeStyle = 'background:#fef08a;color:#854d0e;border:1px solid #fde047;'; // Yellow warning style for active
+                } else if (isRescued) {
+                    badgeStyle = 'background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;';
+                } else {
+                    badgeStyle = 'background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;';
+                }
+                
+                const dotColor = b.status === 'on_promotion' ? '#eab308' : (isRescued ? '#15803d' : '#b91c1c');
+                
+                const qty = parseFloat(b.quantity) || 0;
+
+                return `<tr style="border-bottom:1px solid rgba(226,232,240,0.5);transition:background 0.2s;" onmouseover="this.style.background='rgba(248,250,252,0.8)'" onmouseout="this.style.background=''">
+                    <td style="padding:14px 20px;">
+                        <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:#1e40af;background:rgba(219,234,254,0.7);border:1px solid rgba(147,197,253,0.5);padding:3px 8px;border-radius:6px;">
+                            ${b.batchNumber || b.id.slice(0,8)}
+                        </span>
+                    </td>
+                    <td style="padding:14px 20px;font-weight:600;color:#1e293b;">${b.productName || 'Unknown'}</td>
+                    <td style="padding:14px 20px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:${isRescued ? '#059669' : '#dc2626'};">${qty.toLocaleString()}</td>
+                    <td style="padding:14px 20px;text-align:center;">
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;${badgeStyle}">
+                            <span style="width:5px;height:5px;border-radius:50%;background:${dotColor};"></span>
+                            ${label}
+                        </span>
+                    </td>
+                </tr>`;
+            }).join('');
+        };
+
+        window.setQuarter = function(q, btn) {
+            currentQuarter = q;
+            document.querySelectorAll('.quarter-btn[data-q]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderAll();
+        };
+    </script>
+</body>
+</html>
