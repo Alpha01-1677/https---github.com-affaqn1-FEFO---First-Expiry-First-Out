@@ -481,7 +481,7 @@
     <!-- Firebase Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, query, where, orderBy, onSnapshot, getDocs, getDoc, doc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { buildSidebar, buildHeader, toast, fmtDate, startClock } from './sidebar.js';
 
@@ -1078,6 +1078,18 @@
             const successRate = totalUnitsEver > 0 ? (totalSoldUnits / totalUnitsEver) * 100 : 0;
             document.getElementById('stat-success-rate').innerText = `${successRate.toFixed(1)}%`;
         }
+        
+        // ── Logout ──
+        window.doLogout = async () => {
+            try {
+                await signOut(auth);
+                sessionStorage.clear();
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.error("Logout failed:", err);
+                toast('Logout failed. Please try again.', 'error');
+            }
+        };
 
     </script>
 </body>
