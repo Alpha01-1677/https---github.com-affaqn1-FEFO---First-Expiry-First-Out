@@ -130,7 +130,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
 
     // The new PB15 header must be visible
     await expect(
-      page.locator('h2:has-text("Smart Procurement Feed")')
+      page.locator('h2:has-text("Retailer Portal")')
     ).toBeVisible({ timeout: 15000 });
 
     // The "PB15 Personalized" badge must be rendered

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nestlé SSAMS — Retailer Portal</title>
+    <title>Nestlé SSAMS — Retailer Access</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
@@ -97,58 +97,6 @@
         .status-pending { background: #fff7ed; color: #d97706; border: 1px solid #ffedd5; }
         .status-completed { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
 
-        /* Promotion Cards */
-        .promo-section {
-            background: linear-gradient(135deg, rgba(0, 48, 135, 0.03) 0%, rgba(0, 174, 239, 0.05) 100%);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 24px;
-            border: 1px dashed var(--nestle-accent);
-        }
-        .promo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
-            margin-top: 12px;
-        }
-        .promo-card {
-            background: #fff;
-            border-radius: 16px;
-            padding: 16px;
-            border: 1px solid #e2e8f0;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        .promo-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 48, 135, 0.08);
-            border-color: var(--nestle-accent);
-        }
-        .promo-badge {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: #ef4444;
-            color: #fff;
-            padding: 4px 12px;
-            font-size: 11px;
-            font-weight: 800;
-            border-bottom-left-radius: 12px;
-            text-transform: uppercase;
-        }
-        .btn-claim {
-            width: 100%;
-            margin-top: 12px;
-            padding: 8px;
-            border-radius: 10px;
-            background: var(--nestle-blue);
-            color: #fff;
-            font-size: 12px;
-            font-weight: 700;
-            transition: opacity 0.2s;
-        }
-        .btn-claim:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -212,27 +160,21 @@
                 </div>
                 <div>
                     <h2 class="text-sm font-bold text-slate-900" id="retailer-name-display">Loading...</h2>
-                    <p class="text-xs text-slate-500 font-medium tracking-wide">SSAMS Retailer Portal</p>
+                    <p class="text-xs text-slate-500 font-medium tracking-wide">SSAMS Retailer Access</p>
                 </div>
             </div>
-            <button onclick="logoutRetailer()" class="text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors">Sign Out</button>
+            <div class="flex items-center gap-3">
+                <a href="retailer_portal.html" class="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <span>Retailer Portal</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                </a>
+                <button onclick="logoutRetailer()" class="text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors">Sign Out</button>
+            </div>
         </div>
 
         <!-- Content -->
         <div class="p-8">
-            <!-- Promotions Section -->
-            <div id="promotions-container" class="promo-section hidden">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM16 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1z"/></svg>
-                        Active Promotional Offers
-                    </h3>
-                    <span class="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Exclusive for You</span>
-                </div>
-                <div id="promotions-grid" class="promo-grid">
-                    <!-- Populated via JS -->
-                </div>
-            </div>
+
 
             <h3 class="text-lg font-bold text-slate-800 mb-4">Live Warehouse Stock</h3>
             
@@ -295,7 +237,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, query, onSnapshot, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, query, onSnapshot, serverTimestamp, where, or, and } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
@@ -314,13 +256,7 @@
         let currentUser = null;
         let currentRetailerName = '';
         let liveProducts = {}; // Map of productName -> qty
-        let activePromotions = [];
-        let selectedProduct = null;
-        let selectedPromoId = null;
-        let selectedPromoDiscount = 0;
-        let orderHistory = [];
         let unsubHistory = null;
-        let unsubPromos = null;
 
         // UI Utils
         const $ = id => document.getElementById(id);
@@ -405,17 +341,13 @@
                     $('main-portal').style.display = 'block';
                     $('retailer-name-display').textContent = currentRetailerName;
                     
-                    startLiveStockListener();
                     startHistoryListener(user.uid);
-                    startPromotionsListener(user.uid);
                 } else {
                     await signOut(auth);
                 }
             } else {
                 currentUser = null;
-                if (unsubStock) unsubStock();
                 if (unsubHistory) unsubHistory();
-                if (unsubPromos) unsubPromos();
                 $('main-portal').style.display = 'none';
                 $('auth-portal').style.display = 'block';
             }
@@ -479,125 +411,7 @@
             }
         }
 
-        // ── Promotions Listener ──
-        function startPromotionsListener(uid) {
-            const q = query(collection(db, 'live_campaigns'), where('retailerID', '==', uid), where('status', '==', 'active'));
-            unsubPromos = onSnapshot(q, (snap) => {
-                activePromotions = [];
-                snap.forEach(d => {
-                    activePromotions.push({ id: d.id, ...d.data() });
-                });
-                renderPromotions();
-            }, (error) => {
-                console.error("Promotions sync error:", error);
-            });
-        }
 
-        function renderPromotions() {
-            const container = $('promotions-container');
-            const grid = $('promotions-grid');
-            
-            if (activePromotions.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
-
-            container.classList.remove('hidden');
-            grid.innerHTML = activePromotions.map(p => `
-                <div class="promo-card">
-                    <div class="promo-badge">${p.discountPercent}% OFF</div>
-                    <h4 class="font-bold text-slate-800 text-sm mb-1">${p.promotionTitle}</h4>
-                    <p class="text-[11px] text-slate-500 mb-3">${p.productName} (Standard Nestlé Promo)</p>
-                    
-                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-3">
-                        <span>Starts: ${p.startDate}</span>
-                        <span>Ends: ${p.endDate}</span>
-                    </div>
-                    
-                    <div class="mt-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <label class="form-label" style="margin-bottom:6px;">Request Quantity (Max: ${p.quantityAvailable})</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" id="promo-qty-${p.id}" class="form-input" style="padding: 8px 12px; height: 36px;" max="${p.quantityAvailable}" min="1" value="${p.quantityAvailable}" oninput="if(this.value > ${p.quantityAvailable}) this.value = ${p.quantityAvailable};" />
-                            <button class="btn-claim" style="margin-top:0; height: 36px; padding: 0 16px; width: auto; flex-shrink: 0;" onclick="claimPromo('${p.id}')" id="btn-claim-${p.id}">Accept Offer</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        window.claimPromo = async function(promoId) {
-            const promo = activePromotions.find(p => p.id === promoId);
-            if (!promo) return;
-
-            const qtyInput = $(`promo-qty-${promoId}`);
-            const btn = $(`btn-claim-${promoId}`);
-            
-            if (!qtyInput || !btn) return;
-
-            const qty = parseInt(qtyInput.value, 10);
-
-            if (isNaN(qty) || qty < 1) {
-                showToast('Please enter a valid quantity of at least 1.', 'error');
-                return;
-            }
-            if (qty > promo.quantityAvailable) {
-                showToast(`Maximum available is ${promo.quantityAvailable} units.`, 'error');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = 'Processing...';
-
-            try {
-                const location = $('preferred-location') ? $('preferred-location').value : 'Colombo-01';
-
-                // 1. Create retailer request
-                await addDoc(collection(db, 'retailer_requests'), {
-                    retailerName: currentRetailerName,
-                    requesterUid: currentUser.uid,
-                    productName: promo.productName,
-                    quantityRequested: qty,
-                    preferredLocation: location,
-                    promotionID: promo.id,
-                    appliedDiscount: promo.discountPercent,
-                    status: 'pending',
-                    submittedAt: serverTimestamp()
-                });
-
-                const remainingQty = promo.quantityAvailable - qty;
-
-                // 2. Handle the "Split"
-                if (remainingQty > 0) {
-                    // Update campaign to reserved for the claimed amount
-                    await updateDoc(doc(db, 'live_campaigns', promo.id), {
-                        quantityAvailable: qty,
-                        status: 'reserved'
-                    });
-
-                    // Return the remaining units to the Sales Manager's queue
-                    if (promo.batchID) {
-                        await updateDoc(doc(db, 'batches', promo.batchID), {
-                            quantity: remainingQty,
-                            status: 'escalated'
-                        });
-                    }
-                } else {
-                    // Fully claimed
-                    await updateDoc(doc(db, 'live_campaigns', promo.id), {
-                        quantityAvailable: qty,
-                        status: 'reserved'
-                    });
-                }
-
-                showToast(`Successfully claimed ${qty} units of ${promo.productName}`, 'success');
-                
-            } catch (e) {
-                console.error('Error claiming promotion:', e);
-                showToast('Error claiming promotion: ' + e.message, 'error');
-                btn.disabled = false;
-                btn.textContent = 'Accept Offer';
-            }
-        };
 
         // ── Order History ──
         function startHistoryListener(uid) {
@@ -662,8 +476,6 @@
 
         window.deselectAll = function() {
             selectedProduct = null;
-            selectedPromoId = null;
-            selectedPromoDiscount = 0;
             renderLiveGrid();
             $('selected-product-name').value = 'Please select a product from above';
             $('order-qty').value = '';
@@ -704,8 +516,6 @@
                     productName: selectedProduct,
                     quantityRequested: qty,
                     preferredLocation: location,
-                    promotionID: selectedPromoId || null,
-                    appliedDiscount: selectedPromoDiscount || 0,
                     status: 'pending',
                     submittedAt: serverTimestamp()
                 });

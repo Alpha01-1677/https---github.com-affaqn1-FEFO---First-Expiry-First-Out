@@ -15,6 +15,25 @@
 
         <main class="flex-1 overflow-y-auto p-6 lg:p-8">
 
+            <!-- Filters & Dashboard Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 style="font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">Promotion Analytics</h1>
+                    <p style="font-size:14px;color:#64748b;margin-top:2px;">Monitor retailer interaction patterns and suppression signals.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div style="display:flex;align-items:center;background:#fff;padding:4px 12px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        <span style="font-size:11px;font-weight:700;color:#94a3b8;margin-right:8px;text-transform:uppercase;">From</span>
+                        <input type="date" id="filter-date-from" onchange="renderAll()" style="font-size:12px;font-weight:600;color:#475569;border:none;outline:none;background:transparent;cursor:pointer;" />
+                    </div>
+                    <div style="display:flex;align-items:center;background:#fff;padding:4px 12px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        <span style="font-size:11px;font-weight:700;color:#94a3b8;margin-right:8px;text-transform:uppercase;">To</span>
+                        <input type="date" id="filter-date-to" onchange="renderAll()" style="font-size:12px;font-weight:600;color:#475569;border:none;outline:none;background:transparent;cursor:pointer;" />
+                    </div>
+                    <button onclick="clearDateFilters()" style="padding:6px 12px;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;">Clear</button>
+                </div>
+            </div>
+
             <!-- KPI Cards -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-8">
                 <div class="stat-card">
@@ -61,6 +80,22 @@
                     <canvas id="chart-trend"></canvas>
                 </div>
             </div>
+            
+            <!-- Strategic Recommendations Card -->
+            <div id="recommendations-container" class="mb-8" style="display:none;">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div style="padding:18px 24px;border-bottom:1px solid #f1f5f9;background:linear-gradient(90deg, #fff, #f8fafc);display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:#0f172a;">💡 Strategic Recommendations</div>
+                            <div style="font-size:12px;color:#64748b;margin-top:2px;">Automated insights based on current interaction patterns</div>
+                        </div>
+                        <div style="background:#dbeafe;color:#1e40af;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;">AI ENGINE ACTIVE</div>
+                    </div>
+                    <div id="recommendations-body" class="grid grid-cols-1 md:grid-cols-2 gap-5" style="padding:20px 24px;">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+            </div>
 
             <!-- Bottom Row: Suppression Alerts + Retailer Propensity -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -87,10 +122,11 @@
                             <thead>
                                 <tr>
                                     <th>Retailer ID</th>
-                                    <th>Accepted</th>
-                                    <th>Declined</th>
-                                    <th>Rate</th>
-                                    <th>Signal</th>
+                                    <th>Volume</th>
+                                    <th>Success Rate</th>
+                                    <th>Efficiency</th>
+                                    <th>Last Active</th>
+                                    <th>Archetype</th>
                                 </tr>
                             </thead>
                             <tbody id="propensity-body">
@@ -108,11 +144,26 @@
                         <div style="font-size:15px;font-weight:700;color:#0f172a;">Interaction Log</div>
                         <div style="font-size:12px;color:#64748b;margin-top:2px;">Recent promotion accept / decline events (latest 100)</div>
                     </div>
-                    <select id="filter-action" onchange="applyFilter()" style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:600;color:#475569;outline:none;cursor:pointer;">
-                        <option value="all">All Actions</option>
-                        <option value="accepted">Accepted Only</option>
-                        <option value="declined">Declined Only</option>
-                    </select>
+                    <div class="flex items-center gap-3">
+                        <div style="position:relative;">
+                            <input type="text" id="log-search" oninput="renderTable()" placeholder="Search log..." style="padding:6px 12px 6px 32px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;color:#475569;outline:none;width:180px;" />
+                            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        <button onclick="downloadCSV()" style="padding:6px 12px;font-size:12px;font-weight:600;color:#0057B8;background:#fff;border:1.5px solid #0057B8;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Export CSV
+                        </button>
+                        <select id="filter-action" onchange="renderTable()" style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:600;color:#475569;outline:none;cursor:pointer;">
+                            <option value="all">All Actions</option>
+                            <option value="accepted">Accepted Only</option>
+                            <option value="declined">Declined Only</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="active-filters-bar" style="display:none;padding:8px 24px;background:#f8fafc;border-bottom:1px solid #f1f5f9;align-items:center;gap:8px;">
+                    <span style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Active Filters:</span>
+                    <div id="filter-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                    <button onclick="clearAllFilters()" style="margin-left:auto;font-size:11px;font-weight:700;color:#ef4444;border:none;background:none;cursor:pointer;">Clear All</button>
                 </div>
                 <div style="overflow-x:auto;">
                     <table class="data-table" style="min-width:720px;">
@@ -170,6 +221,10 @@
         let pieChart   = null;
         let trendChart = null;
         let allInteractions = [];
+        
+        // Global Drill-down Filters
+        let filterCategory = null;
+        let filterRetailer = null;
 
         const PALETTE = {
             green:   'rgba(22,163,74,0.85)',
@@ -197,20 +252,91 @@
         });
 
         function renderAll() {
-            renderKPIs();
-            renderBarChart();
-            renderPieChart();
-            renderTrendChart();
-            renderSuppressionSignals();
-            renderPropensityTable();
-            renderTable();
+            const fromVal = document.getElementById('filter-date-from').value;
+            const toVal   = document.getElementById('filter-date-to').value;
+
+            let data = allInteractions;
+
+            if (fromVal) {
+                const fromDate = new Date(fromVal);
+                fromDate.setHours(0,0,0,0);
+                data = data.filter(i => i.timestamp?.toDate && i.timestamp.toDate() >= fromDate);
+            }
+            if (toVal) {
+                const toDate = new Date(toVal);
+                toDate.setHours(23,59,59,999);
+                data = data.filter(i => i.timestamp?.toDate && i.timestamp.toDate() <= toDate);
+            }
+
+            // Sync interactions for downstream functions
+            const currentFilteredData = data;
+
+            renderKPIs(currentFilteredData);
+            renderBarChart(currentFilteredData);
+            renderPieChart(currentFilteredData);
+            renderTrendChart(currentFilteredData);
+            renderSuppressionSignals(currentFilteredData);
+            renderPropensityTable(currentFilteredData);
+            renderTable(currentFilteredData);
+            renderStrategicRecommendations(currentFilteredData);
+            updateFilterBar();
         }
 
+        function updateFilterBar() {
+            const bar = document.getElementById('active-filters-bar');
+            const chips = document.getElementById('filter-chips');
+            chips.innerHTML = '';
+            
+            if (!filterCategory && !filterRetailer) {
+                bar.style.display = 'none';
+                return;
+            }
+            
+            bar.style.display = 'flex';
+            
+            if (filterCategory) {
+                chips.innerHTML += `<div style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                    Category: ${filterCategory}
+                    <span onclick="setCategoryFilter(null)" style="cursor:pointer;font-size:14px;line-height:1;">×</span>
+                </div>`;
+            }
+            if (filterRetailer) {
+                const shortId = filterRetailer.length > 12 ? filterRetailer.slice(0, 6) + '...' + filterRetailer.slice(-4) : filterRetailer;
+                chips.innerHTML += `<div style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                    Retailer: ${shortId}
+                    <span onclick="setRetailerFilter(null)" style="cursor:pointer;font-size:14px;line-height:1;">×</span>
+                </div>`;
+            }
+        }
+
+        window.setCategoryFilter = (cat) => {
+            filterCategory = cat;
+            renderAll();
+        };
+
+        window.setRetailerFilter = (rid) => {
+            filterRetailer = rid;
+            renderAll();
+        };
+
+        window.clearAllFilters = () => {
+            filterCategory = null;
+            filterRetailer = null;
+            document.getElementById('filter-action').value = 'all';
+            renderAll();
+        };
+
+        window.clearDateFilters = function() {
+            document.getElementById('filter-date-from').value = '';
+            document.getElementById('filter-date-to').value = '';
+            renderAll();
+        };
+
         // ── KPIs ──
-        function renderKPIs() {
-            const total    = allInteractions.length;
-            const accepted = allInteractions.filter(i => i.action === 'accepted').length;
-            const declined = allInteractions.filter(i => i.action === 'declined').length;
+        function renderKPIs(data) {
+            const total    = data.length;
+            const accepted = data.filter(i => i.action === 'accepted').length;
+            const declined = data.filter(i => i.action === 'declined').length;
             const rate     = total > 0 ? Math.round((accepted / total) * 100) : 0;
 
             document.getElementById('kpi-total').textContent    = total;
@@ -220,9 +346,9 @@
         }
 
         // ── Stacked Bar: Accepted vs Declined by Category ──
-        function renderBarChart() {
+        function renderBarChart(data) {
             const catMap = {};
-            allInteractions.forEach(i => {
+            data.forEach(i => {
                 const cat = i.category || 'Other';
                 if (!catMap[cat]) catMap[cat] = { accepted: 0, declined: 0 };
                 if (i.action === 'accepted') catMap[cat].accepted++;
@@ -256,15 +382,15 @@
         }
 
         // ── Doughnut: Decline Reasons ──
-        function renderPieChart() {
+        function renderPieChart(data) {
             const reasonMap = {};
-            allInteractions.filter(i => i.action === 'declined').forEach(i => {
+            data.filter(i => i.action === 'declined').forEach(i => {
                 const r = i.reason || 'Unknown';
                 reasonMap[r] = (reasonMap[r] || 0) + 1;
             });
 
             const labels = Object.keys(reasonMap);
-            const data   = labels.map(l => reasonMap[l]);
+            const dataValues   = labels.map(l => reasonMap[l]);
 
             const ctx = document.getElementById('chart-pie').getContext('2d');
             if (pieChart) pieChart.destroy();
@@ -280,7 +406,7 @@
                 type: 'doughnut',
                 data: {
                     labels,
-                    datasets: [{ data, backgroundColor: PIE_COLORS.slice(0, labels.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }]
+                    datasets: [{ data: dataValues, backgroundColor: PIE_COLORS.slice(0, labels.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false, cutout: '55%',
@@ -290,7 +416,7 @@
         }
 
         // ── Line: Trend over 30 days ──
-        function renderTrendChart() {
+        function renderTrendChart(data) {
             const days = 30;
             const buckets = {};
             const today = new Date();
@@ -301,7 +427,7 @@
                 buckets[key] = { accepted: 0, declined: 0 };
             }
 
-            allInteractions.forEach(item => {
+            data.forEach(item => {
                 const ts = item.timestamp?.toDate ? item.timestamp.toDate() : null;
                 if (!ts) return;
                 const key = ts.toISOString().slice(0, 10);
@@ -351,33 +477,66 @@
             });
         }
 
-        // ── Suppression Signals ──
-        function renderSuppressionSignals() {
+        // ── Suppression Signals (Advanced) ──
+        function renderSuppressionSignals(data) {
             const catMap = {};
-            allInteractions.forEach(i => {
+            const now = new Date();
+            const recentThreshold = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+            data.forEach(i => {
                 const cat = i.category || 'Other';
-                if (!catMap[cat]) catMap[cat] = { accepted: 0, declined: 0 };
-                if (i.action === 'accepted') catMap[cat].accepted++;
-                else catMap[cat].declined++;
+                if (!catMap[cat]) catMap[cat] = { 
+                    accepted: 0, declined: 0, 
+                    recentAccepted: 0, recentDeclined: 0,
+                    reasons: {},
+                    lastInteractions: [] // track last 5 for consecutive check
+                };
+                
+                const ts = i.timestamp?.toDate ? i.timestamp.toDate() : new Date();
+                const isRecent = (now - ts) < recentThreshold;
+
+                if (i.action === 'accepted') {
+                    catMap[cat].accepted++;
+                    if (isRecent) catMap[cat].recentAccepted++;
+                } else {
+                    catMap[cat].declined++;
+                    if (isRecent) catMap[cat].recentDeclined++;
+                    const r = i.reason || 'Other';
+                    catMap[cat].reasons[r] = (catMap[cat].reasons[r] || 0) + 1;
+                }
+                
+                // Track chronology for consecutive decline detection
+                catMap[cat].lastInteractions.push({ action: i.action, ts });
             });
 
             const container = document.getElementById('suppression-body');
-            const flagged   = Object.entries(catMap)
+            const flagged = Object.entries(catMap)
                 .map(([cat, v]) => {
                     const total = v.accepted + v.declined;
                     const declineRate = total > 0 ? Math.round((v.declined / total) * 100) : 0;
-                    return { cat, total, declineRate, ...v };
+                    
+                    const recentTotal = v.recentAccepted + v.recentDeclined;
+                    const recentDeclineRate = recentTotal > 0 ? Math.round((v.recentDeclined / recentTotal) * 100) : 0;
+
+                    // Sort reasons
+                    const topReason = Object.entries(v.reasons).sort((a,b) => b[1] - a[1])[0]?.[0] || 'Unknown';
+
+                    // Check for consecutive declines (last 3)
+                    const sortedLast = v.lastInteractions.sort((a,b) => b.ts - a.ts).slice(0, 3);
+                    const isConsecutiveFail = sortedLast.length >= 3 && sortedLast.every(x => x.action === 'declined');
+
+                    return { cat, total, declineRate, recentDeclineRate, topReason, isConsecutiveFail, ...v };
                 })
-                .filter(c => c.declineRate >= 60 && c.total >= 2)
-                .sort((a, b) => b.declineRate - a.declineRate);
+                .filter(c => c.declineRate >= 50 && c.total >= 2) // Lowered threshold but added "Recent" context
+                .sort((a, b) => b.recentDeclineRate - a.recentDeclineRate || b.declineRate - a.declineRate);
 
             if (flagged.length === 0) {
                 container.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:10px;padding:16px 0;color:#16a34a;">
-                        <span style="font-size:22px;">✅</span>
+                    <div style="display:flex;align-items:center;gap:12px;padding:24px;background:#f0fdf4;border-radius:16px;border:1px solid #bcf0da;color:#166534;">
+                        <div style="width:40px;height:40px;background:#dcfce7;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">✅</div>
                         <div>
-                            <div style="font-weight:700;font-size:13px;">No suppression needed</div>
-                            <div style="font-size:12px;color:#64748b;margin-top:2px;">All categories are performing above the 60% decline threshold.</div>
+                            <div style="font-weight:800;font-size:14px;">Healthy Promotion Funnel</div>
+                            <div style="font-size:12px;opacity:0.8;margin-top:2px;">No critical suppression signals detected across current campaigns.</div>
                         </div>
                     </div>`;
                 return;
@@ -385,80 +544,227 @@
 
             container.innerHTML = flagged.map(c => {
                 const barPct = c.declineRate;
-                const severity = barPct >= 80 ? '#dc2626' : '#f59e0b';
+                const trendUp = c.recentDeclineRate > c.declineRate;
+                const severity = c.recentDeclineRate >= 80 || c.isConsecutiveFail ? '#dc2626' : '#f59e0b';
+                
+                let recommendation = 'Evaluate offer relevance';
+                if (c.topReason.toLowerCase().includes('price')) {
+                    recommendation = 'Price Sensitivity: Increase discount by 10-15%';
+                } else if (c.topReason.toLowerCase().includes('stock') || c.topReason.toLowerCase().includes('capacity')) {
+                    recommendation = 'Inventory Saturated: Pause offers for 7 days';
+                } else if (c.isConsecutiveFail) {
+                    recommendation = 'High Friction: Immediate pause & audit required';
+                }
+
+                const trendIcon = trendUp 
+                    ? '<span style="color:#dc2626;font-size:10px;font-weight:800;">↑ Rising Decline</span>' 
+                    : '<span style="color:#16a34a;font-size:10px;font-weight:800;">↓ Stabilizing</span>';
+
                 return `
-                    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f1f5f9;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                            <div style="font-size:13px;font-weight:700;color:#0f172a;">${c.cat}</div>
-                            <span style="font-size:11px;font-weight:700;color:#fff;background:${severity};padding:3px 10px;border-radius:999px;">${c.declineRate}% decline</span>
+                    <div onclick="setCategoryFilter('${c.cat}')" style="margin-bottom:16px;padding:16px;background:${c.isConsecutiveFail?'#fff5f5':'#fff'};border:1px solid ${c.isConsecutiveFail?'#feb2b2':'#f1f5f9'};border-radius:16px;cursor:pointer;transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <div>
+                                <div style="font-size:14px;font-weight:800;color:#0f172a;">${c.cat}</div>
+                                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                                    ${trendIcon}
+                                    <span style="font-size:10px;color:#94a3b8;">•</span>
+                                    <span style="font-size:10px;color:#94a3b8;font-weight:600;">${c.total} Interactions</span>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:16px;font-weight:800;color:${severity};">${c.declineRate}%</div>
+                                <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Decline Rate</div>
+                            </div>
                         </div>
-                        <div style="height:5px;border-radius:3px;background:#f1f5f9;overflow:hidden;">
-                            <div style="height:100%;width:${barPct}%;background:${severity};border-radius:3px;transition:width 0.5s;"></div>
+                        <div style="height:6px;border-radius:3px;background:#f1f5f9;overflow:hidden;margin-bottom:12px;">
+                            <div style="height:100%;width:${barPct}%;background:${severity};border-radius:3px;transition:width 0.8s cubic-bezier(0.4, 0, 0.2, 1);"></div>
                         </div>
-                        <div style="font-size:11px;color:#64748b;margin-top:5px;">${c.declined} declined / ${c.total} total — Recommend pausing offers in this category</div>
+                        <div style="background:${c.isConsecutiveFail?'#fee2e2':'#eff6ff'};padding:8px 12px;border-radius:10px;border:1px solid ${c.isConsecutiveFail?'#fecaca':'#dbeafe'};display:flex;align-items:center;gap:8px;">
+                            <div style="font-size:14px;">${c.isConsecutiveFail?'🚨':'💡'}</div>
+                            <div style="font-size:11px;font-weight:700;color:${c.isConsecutiveFail?'#991b1b':'#1e40af'};line-height:1.3;">
+                                ${recommendation}
+                            </div>
+                        </div>
+                        <div style="font-size:10px;color:#64748b;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+                            <span>Top Reason: <span style="font-weight:700;color:#475569;">${c.topReason}</span></span>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                ${c.isConsecutiveFail ? '<span style="color:#dc2626;font-weight:800;font-size:9px;">CRITICAL FRICTION</span>' : ''}
+                                <button onclick="event.stopPropagation();simulatePause('${c.cat}')" style="padding:4px 8px;font-size:10px;font-weight:700;color:#dc2626;background:#fff;border:1px solid #fecaca;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">PAUSE OFFERS</button>
+                            </div>
+                        </div>
                     </div>`;
             }).join('');
         }
 
-        // ── Retailer Propensity Table ──
-        function renderPropensityTable() {
+        // ── Retailer Propensity Table (Improved) ──
+        function renderPropensityTable(data) {
             const retailerMap = {};
-            allInteractions.forEach(i => {
+            data.forEach(i => {
                 const rid = i.retailerID || 'Unknown';
-                if (!retailerMap[rid]) retailerMap[rid] = { accepted: 0, declined: 0 };
-                if (i.action === 'accepted') retailerMap[rid].accepted++;
-                else retailerMap[rid].declined++;
+                if (!retailerMap[rid]) retailerMap[rid] = { 
+                    accepted: 0, declined: 0, 
+                    catStats: {}, 
+                    redemptionSum: 0, 
+                    interactions: [] 
+                };
+                
+                if (i.action === 'accepted') {
+                    retailerMap[rid].accepted++;
+                    if (i.category) {
+                        retailerMap[rid].catStats[i.category] = (retailerMap[rid].catStats[i.category] || 0) + 1;
+                    }
+                    // For quality metric, use claimedQty if present
+                    if (i.claimedQty) {
+                        retailerMap[rid].redemptionSum += i.claimedQty;
+                    }
+                } else {
+                    retailerMap[rid].declined++;
+                }
+                retailerMap[rid].interactions.push(i);
             });
 
             const rows = Object.entries(retailerMap)
                 .map(([rid, v]) => {
                     const total = v.accepted + v.declined;
                     const rate  = total > 0 ? Math.round((v.accepted / total) * 100) : 0;
-                    return { rid, total, rate, ...v };
+                    
+                    // Top Category
+                    const topCat = Object.entries(v.catStats).sort((a,b) => b[1] - a[1])[0]?.[0] || '—';
+                    
+                    // Efficiency: Avg units per acceptance (simplified proxy for redemption quality)
+                    const efficiency = v.accepted > 0 ? Math.round(v.redemptionSum / v.accepted) : 0;
+                    
+                    // Archetype Logic
+                    let segment = 'PARTNER';
+                    if (total >= 10 && rate >= 70 && efficiency > 50) segment = 'WHALE';
+                    else if (total < 5 && rate >= 80) segment = 'CHERRY_PICKER';
+                    else if (rate < 30 && total >= 8) segment = 'WINDOW_SHOPPER';
+                    else if (rate < 20 && total >= 3) segment = 'DORMANT';
+                    else if (rate >= 60) segment = 'LOYALIST';
+                    else segment = 'PARTNER';
+
+                    // Last Active
+                    const sorted = v.interactions.sort((a,b) => {
+                        const da = a.timestamp?.toDate ? a.timestamp.toDate() : new Date();
+                        const db = b.timestamp?.toDate ? b.timestamp.toDate() : new Date();
+                        return db - da;
+                    });
+                    const lastTs = sorted[0]?.timestamp?.toDate() || null;
+                    
+                    // Trend Indicator (Recent 5 interactions vs Overall)
+                    const recent = sorted.slice(0, 5);
+                    const recentRate = recent.length > 0 ? (recent.filter(i => i.action === 'accepted').length / recent.length) * 100 : 0;
+                    const trend = recentRate > rate + 5 ? 'up' : recentRate < rate - 5 ? 'down' : 'stable';
+
+                    return { rid, total, rate, topCat, efficiency, segment, trend, lastTs, ...v };
                 })
-                .sort((a, b) => b.rate - a.rate)
+                .sort((a, b) => b.rate - a.rate || b.total - a.total)
                 .slice(0, 10);
 
             const tbody = document.getElementById('propensity-body');
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px;">No data yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px;">No propensity data generated.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = rows.map(r => {
-                const signal = r.rate >= 70
-                    ? '<span style="color:#16a34a;font-weight:700;font-size:11px;">🔥 High</span>'
-                    : r.rate >= 40
-                        ? '<span style="color:#d97706;font-weight:700;font-size:11px;">⚡ Medium</span>'
-                        : '<span style="color:#dc2626;font-weight:700;font-size:11px;">❄️ Low</span>';
+                const archetypes = {
+                    'WHALE': { color: '#7c3aed', bg: '#f5f3ff', label: '🐳 WHALE', desc: 'High Volume & Quality' },
+                    'CHERRY_PICKER': { color: '#db2777', bg: '#fdf2f8', label: '🍒 CHERRY PICKER', desc: 'Highly Selective' },
+                    'WINDOW_SHOPPER': { color: '#ea580c', bg: '#fff7ed', label: '👀 WINDOW SHOPPER', desc: 'Low Conversion' },
+                    'LOYALIST': { color: '#16a34a', bg: '#f0fdf4', label: '🤝 LOYALIST', desc: 'Consistent Success' },
+                    'PARTNER': { color: '#475569', bg: '#f8fafc', label: '💼 PARTNER', desc: 'Standard Behavior' },
+                    'DORMANT': { color: '#94a3b8', bg: '#f1f5f9', label: '💤 DORMANT', desc: 'No Recent Activity' }
+                };
+                const s = archetypes[r.segment] || archetypes['PARTNER'];
+                // Prediction logic (simplified)
+                const likelihood = Math.round(r.rate * 0.9 + (r.trend === 'up' ? 10 : r.trend === 'down' ? -10 : 0));
+                const clampedLikelihood = Math.max(5, Math.min(99, likelihood));
+
+                const signal = `
+                    <div style="display:flex;flex-direction:column;gap:1px;">
+                        <span style="color:${s.color};background:${s.bg};padding:2px 8px;border-radius:6px;font-weight:800;font-size:10px;white-space:nowrap;width:fit-content;">${s.label}</span>
+                        <div style="font-size:8px;color:#94a3b8;font-weight:600;padding-left:4px;margin-top:2px;">
+                            Likelihood: <span style="color:${clampedLikelihood > 70 ? '#16a34a' : clampedLikelihood > 40 ? '#ea580c' : '#dc2626'}">${clampedLikelihood}%</span>
+                        </div>
+                    </div>`;
+
+                const trendIcon = r.trend === 'up' 
+                    ? '<span style="color:#16a34a;">↗</span>' 
+                    : r.trend === 'down' 
+                        ? '<span style="color:#dc2626;">↘</span>' 
+                        : '<span style="color:#94a3b8;">→</span>';
 
                 const shortId = r.rid.length > 16 ? r.rid.slice(0, 8) + '…' + r.rid.slice(-4) : r.rid;
+                const timeAgo = r.lastTs ? Math.floor((new Date() - r.lastTs) / (1000 * 60 * 60 * 24)) : null;
+                const lastSeen = timeAgo === 0 ? 'Today' : timeAgo ? `${timeAgo}d ago` : '—';
 
-                return `<tr>
-                    <td style="font-family:'DM Mono',monospace;font-size:11px;color:#475569;" title="${r.rid}">${shortId}</td>
-                    <td style="color:#16a34a;font-weight:700;">${r.accepted}</td>
-                    <td style="color:#dc2626;font-weight:700;">${r.declined}</td>
+                return `<tr onclick="setRetailerFilter('${r.rid}')" style="cursor:pointer;" class="hover:bg-slate-50 transition-colors">
                     <td>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <div style="height:5px;width:60px;border-radius:3px;background:#f1f5f9;overflow:hidden;">
-                                <div style="height:100%;width:${r.rate}%;background:${r.rate>=70?'#16a34a':r.rate>=40?'#f59e0b':'#dc2626'};border-radius:3px;"></div>
+                        <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:#0f172a;" title="${r.rid}">${shortId}</div>
+                        <div style="font-size:9px;color:#94a3b8;margin-top:1px;font-weight:600;">Top: ${r.topCat}</div>
+                    </td>
+                    <td>
+                        <div style="font-size:12px;font-weight:800;color:#1e293b;">${r.total}</div>
+                        <div style="font-size:9px;color:#16a34a;font-weight:700;">${r.accepted} Acc.</div>
+                    </td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <div style="height:6px;width:30px;border-radius:3px;background:#f1f5f9;overflow:hidden;border:1px solid #e2e8f0;">
+                                <div style="height:100%;width:${r.rate}%;background:${r.rate>=75?'#16a34a':r.rate>=40?'#f59e0b':'#dc2626'};border-radius:3px;"></div>
                             </div>
-                            <span style="font-size:12px;font-weight:700;font-family:'DM Mono',monospace;">${r.rate}%</span>
+                            <span style="font-size:12px;font-weight:800;font-family:'DM Mono',monospace;color:#1e293b;">${r.rate}%</span>
+                            <span style="font-size:14px;font-weight:800;">${trendIcon}</span>
                         </div>
                     </td>
-                    <td>${signal}</td>
+                    <td>
+                        <div style="font-size:11px;font-weight:700;color:#0f172a;">${r.efficiency} <span style="font-size:9px;color:#94a3b8;font-weight:500;">qty</span></div>
+                        <div style="height:2px;width:30px;background:#e2e8f0;margin-top:2px;">
+                            <div style="height:100%;width:${Math.min(100, r.efficiency/10)}%;background:#3b82f6;"></div>
+                        </div>
+                    </td>
+                    <td style="font-size:11px;font-weight:600;color:${timeAgo > 7 ? '#dc2626' : '#64748b'};">${lastSeen}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            ${signal}
+                            <button onclick="event.stopPropagation();simulateReview('${r.rid}')" style="padding:4px 8px;font-size:9px;font-weight:800;color:#1d4ed8;background:#eff6ff;border:1px solid #dbeafe;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">REVIEW</button>
+                        </div>
+                    </td>
                 </tr>`;
             }).join('');
         }
 
         // ── Interaction Log Table ──
-        function renderTable() {
+        function renderTable(providedData) {
             const filterVal = document.getElementById('filter-action')?.value || 'all';
-            const filtered  = filterVal === 'all' ? allInteractions : allInteractions.filter(i => i.action === filterVal);
+            const searchVal = document.getElementById('log-search')?.value.toLowerCase() || '';
+            
+            // Use providedData or fall back to filtered allInteractions (to handle drill-downs)
+            let data = providedData || allInteractions;
+            
+            // Apply global drill-down filters
+            if (filterCategory) {
+                data = data.filter(i => i.category === filterCategory);
+            }
+            if (filterRetailer) {
+                data = data.filter(i => i.retailerID === filterRetailer);
+            }
+
+            // Apply Search
+            if (searchVal) {
+                data = data.filter(i => 
+                    (i.productName || '').toLowerCase().includes(searchVal) ||
+                    (i.retailerID || '').toLowerCase().includes(searchVal) ||
+                    (i.category || '').toLowerCase().includes(searchVal) ||
+                    (i.promotionTitle || '').toLowerCase().includes(searchVal)
+                );
+            }
+            
+            const filtered  = filterVal === 'all' ? data : data.filter(i => i.action === filterVal);
 
             const tbody = document.getElementById('log-body');
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">No interactions recorded yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">No interactions matching filters.</td></tr>';
                 return;
             }
 
@@ -476,7 +782,7 @@
                 return `<tr>
                     <td style="font-family:'DM Mono',monospace;font-size:12px;color:#64748b;">${ts}</td>
                     <td style="font-weight:600;color:#0f172a;">${i.productName || '—'}</td>
-                    <td><span class="badge badge-blue">${i.category || '—'}</span></td>
+                    <td><span class="badge badge-blue" style="cursor:pointer;" onclick="event.stopPropagation();setCategoryFilter('${i.category}')">${i.category || '—'}</span></td>
                     <td style="font-size:13px;color:#475569;">${i.promotionTitle || '—'}</td>
                     <td>${actionBadge}</td>
                     <td style="font-size:12px;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${detail}">${detail}</td>
@@ -484,7 +790,170 @@
             }).join('');
         }
 
+        window.downloadCSV = function() {
+            // Get data based on current table state
+            const filterVal = document.getElementById('filter-action')?.value || 'all';
+            let data = allInteractions;
+            if (filterCategory) data = data.filter(i => i.category === filterCategory);
+            if (filterRetailer) data = data.filter(i => i.retailerID === filterRetailer);
+            const filtered = filterVal === 'all' ? data : data.filter(i => i.action === filterVal);
+
+            if (filtered.length === 0) return alert('No data to export');
+
+            const headers = ['Timestamp', 'Product', 'Category', 'Promotion', 'Action', 'Reason/Qty', 'RetailerID'];
+            const rows = filtered.map(i => [
+                i.timestamp?.toDate ? i.timestamp.toDate().toISOString() : '',
+                i.productName || '',
+                i.category || '',
+                i.promotionTitle || '',
+                i.action || '',
+                i.action === 'declined' ? (i.reason || '') : (i.claimedQty || ''),
+                i.retailerID || ''
+            ]);
+
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + headers.join(",") + "\n"
+                + rows.map(e => e.map(cell => `"${cell}"`).join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `nestle_promotion_analytics_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
         window.applyFilter = renderTable;
+
+        // ── Strategic Recommendations Engine ──
+        function renderStrategicRecommendations(data) {
+            const container = document.getElementById('recommendations-container');
+            const body = document.getElementById('recommendations-body');
+            const recommendations = [];
+
+            // 1. Identify at-risk high-value retailers
+            const retailerMap = {};
+            data.forEach(i => {
+                const rid = i.retailerID || 'Unknown';
+                if (!retailerMap[rid]) retailerMap[rid] = { accepted: 0, declined: 0, interactions: [] };
+                if (i.action === 'accepted') retailerMap[rid].accepted++;
+                else retailerMap[rid].declined++;
+                retailerMap[rid].interactions.push(i);
+            });
+
+            const atRiskWhales = Object.entries(retailerMap)
+                .map(([rid, v]) => {
+                    const total = v.accepted + v.declined;
+                    const rate = total > 0 ? (v.accepted / total) * 100 : 0;
+                    const sorted = v.interactions.sort((a,b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+                    const recent = sorted.slice(0, 5);
+                    const recentRate = recent.length > 0 ? (recent.filter(i => i.action === 'accepted').length / recent.length) * 100 : 0;
+                    return { rid, total, rate, recentRate };
+                })
+                .filter(r => r.total >= 8 && r.rate >= 60 && r.recentRate < r.rate - 15);
+
+            if (atRiskWhales.length > 0) {
+                const w = atRiskWhales[0];
+                const shortId = w.rid.length > 12 ? w.rid.slice(0, 6) + '...' + w.rid.slice(-4) : w.rid;
+                recommendations.push({
+                    type: 'danger',
+                    icon: '🚨',
+                    title: `At-Risk Whale: ${shortId}`,
+                    desc: `Acceptance rate dropped from ${Math.round(w.rate)}% to ${Math.round(w.recentRate)}% in last 5 interactions. Immediate account manager intervention recommended.`,
+                    action: `setRetailerFilter('${w.rid}')`
+                });
+                
+                // Trigger toast for most critical
+                import('./sidebar.js').then(m => {
+                    if (!window._lastToastRid || window._lastToastRid !== w.rid) {
+                        m.toast(`High-value retailer ${shortId} is showing a sharp decline in promotion acceptance.`, 'error');
+                        window._lastToastRid = w.rid;
+                    }
+                });
+            }
+
+            // 2. Identify "Cherry Picker" opportunity
+            const cherryPickers = Object.entries(retailerMap)
+                .map(([rid, v]) => {
+                    const total = v.accepted + v.declined;
+                    const rate = total > 0 ? (v.accepted / total) * 100 : 0;
+                    return { rid, total, rate };
+                })
+                .filter(r => r.total < 5 && r.rate >= 80);
+
+            if (cherryPickers.length > 0) {
+                recommendations.push({
+                    type: 'info',
+                    icon: '🍒',
+                    title: 'Cherry Picker Scaling Opportunity',
+                    desc: `${cherryPickers.length} retailers have high conversion with low volume. Increase promotion frequency for these clusters to capture untapped volume.`,
+                    action: 'null'
+                });
+            }
+
+            // 3. Category Shift Recommendation
+            const catMap = {};
+            data.forEach(i => {
+                const cat = i.category || 'Other';
+                if (!catMap[cat]) catMap[cat] = { accepted: 0, total: 0 };
+                catMap[cat].total++;
+                if (i.action === 'accepted') catMap[cat].accepted++;
+            });
+
+            const catSorted = Object.entries(catMap)
+                .map(([cat, v]) => ({ cat, rate: (v.accepted/v.total)*100, total: v.total }))
+                .filter(c => c.total >= 5)
+                .sort((a,b) => b.rate - a.rate);
+
+            if (catSorted.length >= 2) {
+                const top = catSorted[0];
+                const bottom = catSorted[catSorted.length-1];
+                if (top.rate > bottom.rate + 30) {
+                    recommendations.push({
+                        type: 'success',
+                        icon: '📈',
+                        title: 'Budget Allocation Alert',
+                        desc: `${top.cat} has ${Math.round(top.rate)}% success vs ${bottom.cat} at ${Math.round(bottom.rate)}%. Recommended to shift 15% budget to ${top.cat} for ROI optimization.`,
+                        action: `setCategoryFilter('${top.cat}')`
+                    });
+                }
+            }
+
+            if (recommendations.length > 0) {
+                container.style.display = 'block';
+                body.innerHTML = recommendations.map(rec => {
+                    const bg = rec.type === 'danger' ? '#fef2f2' : rec.type === 'success' ? '#f0fdf4' : '#eff6ff';
+                    const border = rec.type === 'danger' ? '#fee2e2' : rec.type === 'success' ? '#dcfce7' : '#dbeafe';
+                    const text = rec.type === 'danger' ? '#991b1b' : rec.type === 'success' ? '#166534' : '#1e40af';
+                    
+                    return `
+                        <div onclick="${rec.action}" style="background:${bg}; border:1px solid ${border}; padding:16px; border-radius:16px; display:flex; gap:16px; cursor:${rec.action !== 'null' ? 'pointer' : 'default'}; transition:transform 0.2s;" class="${rec.action !== 'null' ? 'hover:scale-[1.02]' : ''}">
+                            <div style="font-size:24px; flex-shrink:0;">${rec.icon}</div>
+                            <div>
+                                <div style="font-size:14px; font-weight:800; color:${text};">${rec.title}</div>
+                                <div style="font-size:12px; color:${text}; opacity:0.8; margin-top:4px; line-height:1.5;">${rec.desc}</div>
+                                ${rec.action !== 'null' ? '<div style="font-size:11px; font-weight:700; color:'+text+'; margin-top:8px; text-transform:uppercase; letter-spacing:0.5px;">Click to analyze cluster →</div>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        window.simulatePause = function(cat) {
+            import('./sidebar.js').then(m => {
+                m.toast(`Promotion offers for ${cat} have been paused. Demand planning updated.`, 'info');
+            });
+        };
+
+        window.simulateReview = function(rid) {
+            import('./sidebar.js').then(m => {
+                m.toast(`Retailer ${rid.slice(0,8)}... flagged for manual account review.`, 'success');
+            });
+        };
     </script>
 </body>
 </html>

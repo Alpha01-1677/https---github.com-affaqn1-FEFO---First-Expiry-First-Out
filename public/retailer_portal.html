@@ -153,13 +153,13 @@
                 <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
                 </svg>
-                Promotion Offers
+                Retailer Portal
             </a>
             <a href="#" id="nav-live" onclick="showTab('live')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-100 font-medium transition hover:bg-white/10">
                 <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
-                Live Campaigns
+                My Active Campaigns
             </a>
             <a href="collaboration.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-100 font-medium transition hover:bg-white/10">
                 <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +188,7 @@
         <main class="flex-1 overflow-y-auto p-8 lg:p-10">
             <div id="tab-offers" class="max-w-4xl">
                 <div class="flex items-center gap-3 mb-2">
-                    <h2 class="text-2xl font-bold text-slate-800">Smart Procurement Feed</h2>
+                    <h2 class="text-2xl font-bold text-slate-800">Retailer Portal</h2>
                     <span class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full uppercase tracking-widest border border-purple-200">PB15 Personalized</span>
                 </div>
                 <p class="text-slate-500 mb-8">Curated promotional offers tailored to your store's historical sales velocity and capacity.</p>
@@ -207,7 +207,7 @@
             </div>
 
             <div id="tab-live" class="max-w-5xl" style="display:none;">
-                <h2 class="text-2xl font-bold text-slate-800 mb-2">Live Campaigns</h2>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">My Active Campaigns</h2>
                 <p class="text-slate-500 mb-8">Monitor your currently running promotional batches and sales velocity.</p>
                 <div id="live-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Live campaigns will be populated here -->
@@ -284,7 +284,7 @@
         <div class="ej-modal" onclick="event.stopPropagation()">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
                 <div>
-                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Accept Promotion</h2>
+                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Accept Offer</h2>
                     <p style="font-size:12px;color:#94a3b8;margin-top:4px;">Enter your store-level details to accept this offer.</p>
                 </div>
                 <button onclick="closeAcceptModal()" style="border:none;background:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:20px;line-height:1;">×</button>
@@ -294,11 +294,11 @@
             
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:20px;">
                 <div style="margin-bottom:12px;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Promotional Title</div>
+                    <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Offer Title</div>
                     <div id="display-title" style="font-size:14px; font-weight:600; color:#0f172a;"></div>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Nestlé Discount</div>
+                    <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Promotional Discount</div>
                     <div id="display-discount" style="font-size:14px; font-weight:600; color:#059669;"></div>
                 </div>
                 <div style="display:flex; gap:20px;">
@@ -329,7 +329,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment, getDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment, getDoc, addDoc, serverTimestamp, or, and } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
@@ -372,7 +372,13 @@
                 return;
             }
 
-            const q = query(collection(db, 'live_campaigns'), where('retailerID', 'in', [user.uid, 'ALL']));
+            const q = query(
+                collection(db, 'live_campaigns'), 
+                or(
+                    where('retailerID', '==', user.uid),
+                    where('retailerID', '==', 'ALL')
+                )
+            );
             onSnapshot(q, async snap => {
                 const offersContainer = document.getElementById('offers-container');
                 const liveContainer = document.getElementById('live-container');
@@ -656,7 +662,16 @@
                     timestamp: serverTimestamp()
                 });
 
-                // Close the modal — do NOT change offer status so it stays visible to other retailers
+                // Update campaign status if it's a specific retailer offer (not broadcast)
+                if (offer && offer.retailerID !== 'ALL') {
+                    await updateDoc(doc(db, 'live_campaigns', id), {
+                        status: 'declined',
+                        declineReason: reason,
+                        declinedAt: serverTimestamp()
+                    });
+                }
+
+                // Close the modal
                 document.getElementById('decline-modal-overlay').classList.remove('open');
 
                 // Show a brief toast acknowledgement
@@ -753,6 +768,19 @@
                         reservedByUid: auth.currentUser?.uid || ''
                     });
 
+                    // Log interaction
+                    await addDoc(collection(db, 'promotion_interactions'), {
+                        promotionID: id,
+                        retailerID: auth.currentUser?.uid || '',
+                        productName: offer.productName || '',
+                        category: (offer.productName || '').split(' ')[0] || 'General',
+                        promotionTitle: offer.promotionTitle || '',
+                        discountPercent: offer.discountPercent || 0,
+                        action: 'accepted',
+                        claimedQty: claimedQty,
+                        timestamp: serverTimestamp()
+                    });
+
                     // Update the ALL campaign's quantity or close it
                     if (remainingQty > 0) {
                         await updateDoc(doc(db, 'live_campaigns', id), {
@@ -783,6 +811,19 @@
                         quantityAvailable: claimedQty // Update the campaign to the actual claimed amount
                     });
 
+                    // Log interaction
+                    await addDoc(collection(db, 'promotion_interactions'), {
+                        promotionID: id,
+                        retailerID: auth.currentUser?.uid || '',
+                        productName: offer.productName || '',
+                        category: (offer.productName || '').split(' ')[0] || 'General',
+                        promotionTitle: offer.promotionTitle || '',
+                        discountPercent: offer.discountPercent || 0,
+                        action: 'accepted',
+                        claimedQty: claimedQty,
+                        timestamp: serverTimestamp()
+                    });
+
                     // 2. Free up the unaccepted quantity back to the batch
                     if (offer && offer.batchID) {
                         const unacceptedQty = offer.quantityAvailable - claimedQty;
@@ -804,23 +845,6 @@
                         }
                     }
                 }
-
-                // Log ACCEPT interaction to promotion_interactions
-                const offer = currentOffers[id];
-                const productName = offer?.productName || '';
-                const category = (productName).split(' ')[0] || 'General';
-                await addDoc(collection(db, 'promotion_interactions'), {
-                    promotionID: id,
-                    retailerID: auth.currentUser?.uid || '',
-                    productName: productName,
-                    category: category,
-                    promotionTitle: offer?.promotionTitle || '',
-                    discountPercent: offer?.discountPercent || 0,
-                    claimedQty: parseInt(document.getElementById('claimed-quantity').value) || 0,
-                    action: 'accepted',
-                    reason: null,
-                    timestamp: serverTimestamp()
-                });
 
                 closeAcceptModal();
             } catch (e) {

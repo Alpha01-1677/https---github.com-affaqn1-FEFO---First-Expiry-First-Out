@@ -18,7 +18,8 @@ service cloud.firestore {
     match /live_campaigns/{campaignId} {
       allow read: if request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'Retailer' || 
-        resource.data.retailerID == request.auth.uid
+        resource.data.retailerID == request.auth.uid ||
+        resource.data.retailerID == 'ALL'
       );
       allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'Retailer';
       allow update: if request.auth != null; 
