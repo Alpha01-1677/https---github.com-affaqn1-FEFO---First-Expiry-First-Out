@@ -288,6 +288,13 @@ export const NAV_PAGES = [
         href: 'analyst_dashboard.html',
         subtitle: 'Propensity scoring and decline analysis',
         icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>`
+    },
+    {
+        id: 'dms_portal',
+        label: 'DMS Simulation',
+        href: 'dms_portal.html',
+        subtitle: 'Enterprise ERP / DMS Mock Portal',
+        icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>`
     }
 ];
 
@@ -317,10 +324,10 @@ export function buildSidebar(activePage) {
         visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'financial_roi' || p.id === 'audit_logs' || p.id === 'analyst_dashboard');
     } else if (isSalesManager) {
         // Sales Managers see Dashboard, Sales Manager Portal, Scorecard, and Audit Logs
-        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'sales_manager_portal' || p.id === 'retailer_scorecard' || p.id === 'audit_logs' || p.id === 'analyst_dashboard');
+        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'sales_manager_portal' || p.id === 'retailer_scorecard' || p.id === 'audit_logs' || p.id === 'analyst_dashboard' || p.id === 'dms_portal');
     } else if (isPlanner || isLogistics) {
         // Planners and Logistics Managers see Dashboard and Collaboration Portal
-        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'collaboration');
+        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'collaboration' || p.id === 'dms_portal');
     } else {
         // Staff see everything EXCEPT supervisor-only pages
         visiblePages = NAV_PAGES.filter(p => !SUPERVISOR_ONLY_PAGES.includes(p.id) && p.id !== 'sales_manager_portal' && p.id !== 'retailer_scorecard' && p.id !== 'financial_roi' && p.id !== 'audit_logs');
