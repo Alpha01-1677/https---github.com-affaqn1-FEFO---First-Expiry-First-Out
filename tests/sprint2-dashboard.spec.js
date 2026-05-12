@@ -141,8 +141,10 @@ test.describe('Sprint 2: Manual Test Cases - Dashboard & Features (PB5-PB8)', ()
         });
 
         await test.step('Expected Result: High-risk locations are highlighted with clear status indicators showing aging bucket density', async () => {
-            // Map renders the leaflets, so checking for leaflet-container class
-            await expect(page.locator('#regional-map')).toHaveClass(/leaflet-container/);
+            // Map renders the leaflets asynchronously, so we poll for the leaflet-container class
+            await expect(async () => {
+                await expect(page.locator('#regional-map')).toHaveClass(/leaflet-container/);
+            }).toPass({ timeout: 10000 });
         });
     });
 

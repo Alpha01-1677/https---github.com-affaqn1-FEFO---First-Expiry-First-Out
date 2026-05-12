@@ -165,7 +165,7 @@
                     <div style="position:relative;z-index:1;">
                         <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:rgba(255,255,255,0.85);margin-bottom:12px;">
                             <span style="width:6px;height:6px;border-radius:50%;background:#00AEEF;display:inline-block;box-shadow:0 0 6px rgba(0,174,239,0.8);"></span>
-                            Supply Chain Director View
+                            Finance Auditor View
                         </div>
                         <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;margin-bottom:8px;">
                             Product Rescue Dashboard
@@ -253,8 +253,8 @@
                             <div style="display:flex;gap:8px;">
                                 <select id="table-filter" onchange="renderTable()" style="font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;outline:none;cursor:pointer;">
                                     <option value="all">All Batches</option>
-                                    <option value="completed_promotion">Rescued Only</option>
-                                    <option value="expired">Lost Only</option>
+                                    <option value="rescued">Rescued Only</option>
+                                    <option value="lost">Lost Only</option>
                                 </select>
                             </div>
                         </div>
@@ -286,7 +286,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { buildSidebar, buildHeader, toast, startClock } from './sidebar.js';
+        import { buildSidebar, buildHeader, toast, startClock, mrslStatus } from './sidebar.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
@@ -354,39 +354,54 @@
         function renderAll() {
             const { start, end } = getQuarterRange(currentQuarter);
 
-            const filtered = allBatches.filter(b => {
+            let rescuedMetric = 0;
+            let lostMetric = 0;
+            let rescuedCount = 0;
+            let lostCount = 0;
+            const tableRows = [];
+
+            allBatches.forEach(b => {
                 const d = batchDate(b);
-                return d >= start && d <= end;
+                if (d < start || d > end) return;
+                
+                const ms = mrslStatus(b);
+                const isExpired = ms.daysLeft < 0;
+                
+                const totalQty = parseFloat(b.quantity) || 0;
+                const rescuedQty = parseFloat(b.reservedQty) || 0;
+                const remainingQty = Math.max(0, totalQty - rescuedQty);
+                
+                if (rescuedQty > 0) {
+                    rescuedMetric += rescuedQty;
+                    rescuedCount++;
+                    tableRows.push({ ...b, displayStatus: 'rescued', displayQty: rescuedQty, originalId: b.id });
+                }
+                
+                if (isExpired && remainingQty > 0) {
+                    lostMetric += remainingQty;
+                    lostCount++;
+                    tableRows.push({ ...b, displayStatus: 'lost', displayQty: remainingQty, originalId: b.id });
+                }
             });
 
-            // Include 'on_promotion' as rescued volume to show potential rescue
-            const rescued = filtered.filter(b => b.status === 'completed_promotion' || b.status === 'on_promotion');
-            const lost = filtered.filter(b => b.status === 'expired');
-
-            const rescuedMetric = rescued.reduce((s, b) => s + (parseFloat(b.quantity) || 0), 0);
-            const lostMetric = lost.reduce((s, b) => s + (parseFloat(b.quantity) || 0), 0);
             const total = rescuedMetric + lostMetric;
             const rate = total > 0 ? ((rescuedMetric / total) * 100).toFixed(1) : '0.0';
 
             // Update metric cards
             document.getElementById('card-rescued').textContent = rescuedMetric.toLocaleString() + ' Units';
-            document.getElementById('card-rescued-count').textContent = `${rescued.length} batch${rescued.length !== 1 ? 'es' : ''} successfully promoted or active`;
+            document.getElementById('card-rescued-count').textContent = `${rescuedCount} batch portion${rescuedCount !== 1 ? 's' : ''} successfully rescued`;
             document.getElementById('card-lost').textContent = lostMetric.toLocaleString() + ' Units';
-            document.getElementById('card-lost-count').textContent = `${lost.length} batch${lost.length !== 1 ? 'es' : ''} expired without recovery`;
+            document.getElementById('card-lost-count').textContent = `${lostCount} batch portion${lostCount !== 1 ? 's' : ''} expired without recovery`;
             document.getElementById('card-rate').textContent = rate + '%';
 
             // Update Labels
-            document.getElementById('rescued-label').textContent = '📦 Units Rescued (Inc. Active)';
+            document.getElementById('rescued-label').textContent = '📦 Units Rescued';
             document.getElementById('lost-label').textContent = '🔴 Total Units Lost';
             document.getElementById('chart-title').textContent = 'Product Volume: Rescued vs. Lost';
 
+            window._tableRows = tableRows;
             renderChart(rescuedMetric, lostMetric);
             renderTable();
-
-            // Store for table use
-            window._rescuedBatches = rescued;
-            window._lostBatches = lost;
-            window._allFilteredBatches = [...rescued, ...lost];
         }
 
         function renderChart(rescuedVal, lostVal) {
@@ -456,43 +471,40 @@
             const filter = document.getElementById('table-filter').value;
             const { start, end } = getQuarterRange(currentQuarter);
 
-            let rows = allBatches.filter(b => {
+            let rows = (window._tableRows || []).filter(b => {
                 const d = batchDate(b);
                 if (d < start || d > end) return false;
-                if (filter === 'all') return b.status === 'completed_promotion' || b.status === 'on_promotion' || b.status === 'expired';
-                if (filter === 'completed_promotion') return b.status === 'completed_promotion' || b.status === 'on_promotion';
-                return b.status === filter;
+                if (filter !== 'all' && b.displayStatus !== filter) return false;
+                return true;
             });
 
-            rows.sort((a, b) => (parseFloat(b.quantity) || 0) - (parseFloat(a.quantity) || 0));
+            rows.sort((a, b) => (parseFloat(b.displayQty) || 0) - (parseFloat(a.displayQty) || 0));
 
             const tbody = document.getElementById('breakdown-tbody');
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#94a3b8;font-size:13.5px;">No matching batches found for this period.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#94a3b8;font-size:13.5px;">No matching batch portions found for this period.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = rows.map(b => {
-                const isRescued = b.status === 'completed_promotion' || b.status === 'on_promotion';
-                const label = b.status === 'on_promotion' ? 'Active Promo' : (isRescued ? 'Rescued' : 'Lost');
+                const isRescued = b.displayStatus === 'rescued';
+                const label = isRescued ? 'Rescued' : 'Lost';
                 
                 let badgeStyle = '';
-                if (b.status === 'on_promotion') {
-                    badgeStyle = 'background:#fef08a;color:#854d0e;border:1px solid #fde047;'; // Yellow warning style for active
-                } else if (isRescued) {
+                if (isRescued) {
                     badgeStyle = 'background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;';
                 } else {
                     badgeStyle = 'background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;';
                 }
                 
-                const dotColor = b.status === 'on_promotion' ? '#eab308' : (isRescued ? '#15803d' : '#b91c1c');
+                const dotColor = isRescued ? '#15803d' : '#b91c1c';
                 
-                const qty = parseFloat(b.quantity) || 0;
+                const qty = parseFloat(b.displayQty) || 0;
 
                 return `<tr style="border-bottom:1px solid rgba(226,232,240,0.5);transition:background 0.2s;" onmouseover="this.style.background='rgba(248,250,252,0.8)'" onmouseout="this.style.background=''">
                     <td style="padding:14px 20px;">
                         <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:#1e40af;background:rgba(219,234,254,0.7);border:1px solid rgba(147,197,253,0.5);padding:3px 8px;border-radius:6px;">
-                            ${b.batchNumber || b.id.slice(0,8)}
+                            ${b.batchNumber || b.originalId.slice(0,8)}
                         </span>
                     </td>
                     <td style="padding:14px 20px;font-weight:600;color:#1e293b;">${b.productName || 'Unknown'}</td>

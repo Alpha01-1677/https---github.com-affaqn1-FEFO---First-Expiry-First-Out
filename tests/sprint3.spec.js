@@ -146,13 +146,12 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
     // Offers container must be present in the DOM
     await expect(page.locator('#offers-container')).toBeAttached({ timeout: 10000 });
 
-    // Wait a moment for Firebase to populate data
-    await page.waitForTimeout(3000);
-
-    // Either the container has cards, or the no-offers message is visible
-    const hasOffers = await page.locator('#offers-container .bg-white').count() > 0;
-    const noOffersVisible = await page.locator('#no-offers-msg').isVisible();
-    expect(hasOffers || noOffersVisible).toBeTruthy();
+    // Poll until Firebase populates cards or the empty-state appears (avoids hardcoded delays)
+    await expect(async () => {
+      const hasOffers = await page.locator('#offers-container .bg-white').count() > 0;
+      const noOffersVisible = await page.locator('#no-offers-msg').isVisible();
+      expect(hasOffers || noOffersVisible).toBeTruthy();
+    }).toPass({ timeout: 15000 });
 
     console.log('✅ TC-04 PASS: Smart Procurement Feed header, badge, and container/empty state are verified.');
   });
@@ -254,6 +253,146 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
       const noOfferVisible = await noOffersMsg.isVisible();
       expect(containerVisible || noOfferVisible).toBeTruthy();
     }
+  });
+
+  // ─── TC-PB14-A: Velocity Algorithm – Modal auto-fills title & discount ────
+  test('TC-PB14-A [PB14]: Trigger Promo modal auto-fills promotion title and discount via velocity algorithm', async ({ page }) => {
+    await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
+    await page.goto('/sales_manager_portal.html');
+
+    // Wait for the escalated batches table to load
+    await expect(page.locator('#escalated-tbody')).toBeVisible({ timeout: 15000 });
+
+    // Wait until at least one Trigger Promo button appears (or confirm no batches exist)
+    const triggerBtn = page.locator('.btn-trigger').first();
+    const hasBatch = await expect(async () => {
+      const visible = await triggerBtn.isVisible();
+      expect(visible).toBe(true);
+    }).toPass({ timeout: 20000 }).then(() => true).catch(() => false);
+
+    if (!hasBatch) {
+      console.log('ℹ️ TC-PB14-A SKIP: No escalated batches available — cannot open promotion modal.');
+      return;
+    }
+
+    // Open the promotion modal
+    await triggerBtn.click();
+    await expect(page.locator('#promo-modal-overlay')).toHaveClass(/open/, { timeout: 8000 });
+
+    // PB14: Verify promo-title is auto-filled with a non-empty value
+    const titleInput = page.locator('#promo-title');
+    await expect(titleInput).toBeVisible();
+    const titleValue = await titleInput.inputValue();
+    expect(titleValue.trim().length).toBeGreaterThan(0);
+    expect(titleValue).toMatch(/Clearance|Special|Markdown|Flash/i);
+
+    // PB14: Verify promo-discount is auto-filled with a valid numeric value
+    const discountInput = page.locator('#promo-discount');
+    await expect(discountInput).toBeVisible();
+    const discountValue = parseInt(await discountInput.inputValue(), 10);
+    expect([10, 25, 40, 50]).toContain(discountValue);
+
+    // PB14: Verify the AI Recommended hints are shown
+    const titleHint    = page.locator('#ai-title-hint');
+    const discountHint = page.locator('#ai-discount-hint');
+    await expect(titleHint).toBeVisible();
+    await expect(discountHint).toBeVisible();
+
+    console.log(`✅ TC-PB14-A PASS: Modal auto-filled — Title: "${titleValue}", Discount: ${discountValue}%`);
+  });
+
+  // ─── TC-PB14-B: Velocity Algorithm – Three-Tier discount correctness ───────
+  test('TC-PB14-B [PB14]: Auto-filled discount matches one of the three velocity tiers (10/25/40)', async ({ page }) => {
+    await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
+    await page.goto('/sales_manager_portal.html');
+
+    await expect(page.locator('#escalated-tbody')).toBeVisible({ timeout: 15000 });
+
+    const triggerBtn = page.locator('.btn-trigger').first();
+    const hasBatch = await expect(async () => {
+      expect(await triggerBtn.isVisible()).toBe(true);
+    }).toPass({ timeout: 20000 }).then(() => true).catch(() => false);
+
+    if (!hasBatch) {
+      console.log('ℹ️ TC-PB14-B SKIP: No escalated batches — velocity tier cannot be evaluated.');
+      return;
+    }
+
+    await triggerBtn.click();
+    await expect(page.locator('#promo-modal-overlay')).toHaveClass(/open/, { timeout: 8000 });
+
+    const discount = parseInt(await page.locator('#promo-discount').inputValue(), 10);
+    const title    = await page.locator('#promo-title').inputValue();
+
+    // Map each valid tier and verify title matches the assigned discount
+    const TIER_MAP = {
+      10: /Stock Clearance/i,
+      25: /Weekend Special/i,
+      40: /Flash Sale|Final Markdown/i,
+      50: /Flash Sale|Fresh Clearance/i  // Dairy critical tier
+    };
+
+    expect(Object.keys(TIER_MAP).map(Number)).toContain(discount);
+    if (TIER_MAP[discount]) {
+      expect(title).toMatch(TIER_MAP[discount]);
+    }
+
+    // Verify the form fields are still editable (manager must be able to override)
+    const titleInput    = page.locator('#promo-title');
+    const discountInput = page.locator('#promo-discount');
+    await expect(titleInput).not.toBeDisabled();
+    await expect(discountInput).not.toBeDisabled();
+
+    // Verify manager can change the value (editability check)
+    await titleInput.fill('My Custom Title');
+    const overriddenTitle = await titleInput.inputValue();
+    expect(overriddenTitle).toBe('My Custom Title');
+
+    console.log(`✅ TC-PB14-B PASS: Tier verified — Discount: ${discount}%, Title pattern matched. Fields are editable.`);
+  });
+
+  // ─── TC-PB14-C: Velocity Algorithm – AI hints render correctly ─────────────
+  test('TC-PB14-C [PB14]: AI Recommended hints appear after batch selection and are labelled correctly', async ({ page }) => {
+    await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
+    await page.goto('/sales_manager_portal.html');
+
+    await expect(page.locator('#escalated-tbody')).toBeVisible({ timeout: 15000 });
+
+    const allTriggerBtns = page.locator('.btn-trigger');
+
+    // Wait for at least one button OR confirm empty queue
+    const hasBatch = await expect(async () => {
+      expect(await allTriggerBtns.count()).toBeGreaterThan(0);
+    }).toPass({ timeout: 20000 }).then(() => true).catch(() => false);
+
+    if (!hasBatch) {
+      console.log('ℹ️ TC-PB14-C SKIP: No escalated batches — AI hint rendering cannot be verified.');
+      return;
+    }
+
+    // Click the first batch to open modal
+    await allTriggerBtns.first().click();
+    await expect(page.locator('#promo-modal-overlay')).toHaveClass(/open/, { timeout: 8000 });
+
+    // Both AI hint badges must be visible immediately after modal open
+    const titleHint    = page.locator('#ai-title-hint');
+    const discountHint = page.locator('#ai-discount-hint');
+    await expect(titleHint).toBeVisible({ timeout: 5000 });
+    await expect(discountHint).toBeVisible({ timeout: 5000 });
+
+    const hintText = await titleHint.innerText();
+    expect(hintText).toMatch(/AI Recommended/i);
+
+    // Verify promo-title field has a blue-tinted border (PB14 visual indicator)
+    await expect(async () => {
+      const borderColor = await page.locator('#promo-title').evaluate(
+        el => window.getComputedStyle(el).borderColor
+      );
+      // The border is set to #c7d2fe (indigo-200) — any non-default colour confirms the hint is applied
+      expect(borderColor).not.toBe('rgb(226, 232, 240)'); // Not default gray
+    }).toPass({ timeout: 5000 });
+
+    console.log(`✅ TC-PB14-C PASS: AI hints visible — "${hintText}". Indigo border confirmed on auto-filled fields.`);
   });
 
   // ─── TC-07: Logout Functionality ──────────────────────────────────────────

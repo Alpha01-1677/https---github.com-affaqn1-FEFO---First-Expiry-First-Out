@@ -306,11 +306,11 @@ export function buildSidebar(activePage) {
         // Supervisors see everything
         visiblePages = NAV_PAGES;
     } else if (isAuditor) {
-        // Auditors see Dashboard and Audit Logs only
-        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'audit_logs');
+        // Auditors see Dashboard, Financial ROI, and Audit Logs
+        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'financial_roi' || p.id === 'audit_logs');
     } else if (isSalesManager) {
-        // Sales Managers see Dashboard, Sales Manager Portal, Scorecard, Financial ROI, and Audit Logs
-        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'sales_manager_portal' || p.id === 'retailer_scorecard' || p.id === 'financial_roi' || p.id === 'audit_logs');
+        // Sales Managers see Dashboard, Sales Manager Portal, Scorecard, and Audit Logs
+        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'sales_manager_portal' || p.id === 'retailer_scorecard' || p.id === 'audit_logs');
     } else if (isPlanner || isLogistics) {
         // Planners and Logistics Managers see Dashboard and Collaboration Portal
         visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'collaboration');

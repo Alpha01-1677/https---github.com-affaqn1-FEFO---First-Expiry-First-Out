@@ -279,6 +279,11 @@
                 <span class="text-slate-600 font-medium">Sales Manager</span>
                 <span class="mono text-slate-400">salesmanager@nestle.com</span>
             </button>
+            <button class="cred-pill" onclick="fillCreds('auditor@nestle.com','nestle123')">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                <span class="text-slate-600 font-medium">Finance Auditor</span>
+                <span class="mono text-slate-400">auditor@nestle.com</span>
+            </button>
         </div>
 
         <!-- ── Retailer Portal link ── -->
@@ -412,6 +417,8 @@
                     role = 'Logistics Manager';
                 } else if (email.toLowerCase().includes('salesmanager')) {
                     role = 'Sales Manager';
+                } else if (email.toLowerCase().includes('auditor')) {
+                    role = 'Finance Auditor';
                 } else if (email.toLowerCase().includes('retailer')) {
                     role = 'Retailer';
                 }
@@ -427,7 +434,8 @@
                 const isDemandPlanner = actualRole.includes('demand planner') || actualRole.includes('demandplanner');
                 const isLogistics = actualRole.includes('logistics');
                 const isSalesManager = actualRole.includes('sales manager') || actualRole.includes('salesmanager');
-                const isManagementRole = isSupervisorRole || isDemandPlanner || isLogistics || isSalesManager;
+                const isAuditor = actualRole.includes('auditor');
+                const isManagementRole = isSupervisorRole || isDemandPlanner || isLogistics || isSalesManager || isAuditor;
                 const isRetailer = actualRole === 'retailer';
 
                 if (activeTab === 'supervisor' && !isManagementRole && !isRetailer) {
@@ -477,6 +485,8 @@
                         window.location.href = 'sales_manager_portal.html';
                     } else if (isDemandPlanner) {
                         window.location.href = 'dashboard.html'; // Assuming dashboard.html is the planner dashboard
+                    } else if (isAuditor) {
+                        window.location.href = 'financial_roi.html';
                     } else if (isManagementRole) {
                         window.location.href = 'dashboard.html';
                     } else {
