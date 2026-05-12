@@ -161,6 +161,12 @@
                 </svg>
                 My Active Campaigns
             </a>
+            <a href="#" id="nav-orders" onclick="showTab('orders')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-100 font-medium transition hover:bg-white/10">
+                <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                </svg>
+                Fulfillment & Orders
+            </a>
             <a href="collaboration.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-100 font-medium transition hover:bg-white/10">
                 <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
@@ -220,6 +226,38 @@
                     </div>
                     <h3 class="text-lg font-bold text-slate-800 mb-2">No Live Campaigns</h3>
                     <p class="text-sm text-slate-500 max-w-sm">Accept a promotion offer to start a live campaign.</p>
+                </div>
+            </div>
+
+            <div id="tab-orders" class="max-w-5xl" style="display:none;">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Order Fulfillment Tracking</h2>
+                <p class="text-slate-500 mb-8">Track the status of your accepted promotions and expected deliveries synced from the DMS.</p>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                                    <th class="p-4 pl-6">Order Details</th>
+                                    <th class="p-4">Date Created</th>
+                                    <th class="p-4">Quantity</th>
+                                    <th class="p-4">DMS Sync Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-tbody" class="divide-y divide-slate-50">
+                                <!-- Orders will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="no-orders-msg" class="p-16 flex flex-col items-center justify-center text-center" style="display:none;">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">No Orders Yet</h3>
+                        <p class="text-sm text-slate-500 max-w-sm">Accepted promotions will automatically generate sales orders here.</p>
+                    </div>
                 </div>
             </div>
         </main>
@@ -370,6 +408,7 @@
         window.showTab = function(tab) {
             document.getElementById('tab-offers').style.display = tab === 'offers' ? 'block' : 'none';
             document.getElementById('tab-live').style.display = tab === 'live' ? 'block' : 'none';
+            document.getElementById('tab-orders').style.display = tab === 'orders' ? 'block' : 'none';
             
             // Update sidebar UI
             document.getElementById('nav-offers').classList.toggle('bg-white/15', tab === 'offers');
@@ -379,6 +418,10 @@
             document.getElementById('nav-live').classList.toggle('bg-white/15', tab === 'live');
             document.getElementById('nav-live').classList.toggle('text-white', tab === 'live');
             document.getElementById('nav-live').classList.toggle('text-blue-100', tab !== 'live');
+
+            document.getElementById('nav-orders').classList.toggle('bg-white/15', tab === 'orders');
+            document.getElementById('nav-orders').classList.toggle('text-white', tab === 'orders');
+            document.getElementById('nav-orders').classList.toggle('text-blue-100', tab !== 'orders');
         };
 
         onAuthStateChanged(auth, user => {
@@ -447,11 +490,17 @@
                     }
 
                     if (offer.status === 'active') {
-                        // Deduplication logic: keyed by batchID or batchNumber + productName
-                        const dedupeKey = offer.batchID || `${offer.productName}-${offer.batchNumber}`;
+                        // Deduplication logic: keyed by batchID or batchNumber + productName + title
+                        const dedupeKey = offer.batchID || `${offer.productName}-${offer.batchNumber || 'no-batch'}-${offer.promotionTitle || 'no-title'}`;
                         
-                        // If we already have this offer, keep the one with the higher discount or just skip
-                        if (activeOffersMap.has(dedupeKey)) continue;
+                        // Keep the offer with the highest discount
+                        if (activeOffersMap.has(dedupeKey)) {
+                            const existing = activeOffersMap.get(dedupeKey).offer;
+                            if ((offer.discountPercent || 0) > (existing.discountPercent || 0)) {
+                                activeOffersMap.set(dedupeKey, { offer, offerId });
+                            }
+                            continue;
+                        }
 
                         const category = (offer.productName || '').split(' ')[0] || 'General';
                         let matchScore = affinity[category] || 0.1;
@@ -506,6 +555,56 @@
 
                 noOffers.style.display = hasOffers ? 'none' : 'flex';
                 noLive.style.display = hasLive ? 'none' : 'flex';
+            });
+
+            // PB14: Fetch Sales Orders to track fulfillment status
+            const ordersQ = query(collection(db, 'sales_orders'), where('retailerId', '==', user.uid));
+            onSnapshot(ordersQ, snap => {
+                const ordersTbody = document.getElementById('orders-tbody');
+                const noOrders = document.getElementById('no-orders-msg');
+                
+                ordersTbody.innerHTML = '';
+                let hasOrders = false;
+
+                // Sort orders by createdAt descending
+                const orders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                orders.sort((a, b) => {
+                    const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+                    const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+                    return bTime - aTime;
+                });
+
+                orders.forEach(order => {
+                    hasOrders = true;
+                    const dateStr = order.createdAt?.toDate 
+                        ? order.createdAt.toDate().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit'}) 
+                        : 'Just now';
+                        
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition-colors';
+                    tr.innerHTML = `
+                        <td class="p-4 pl-6">
+                            <div class="font-bold text-slate-800">${order.productName || 'Promotional Product'}</div>
+                            <div class="text-[11px] text-slate-500 font-mono mt-0.5">Order ID: ${order.orderId || order.id}</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="text-sm font-medium text-slate-600">${dateStr}</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="text-sm font-bold text-slate-800 font-mono">${(order.claimedQuantity || 0).toLocaleString()} units</div>
+                        </td>
+                        <td class="p-4 pr-6">
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100">
+                                <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                <span class="text-xs font-bold text-blue-700">${order.fulfillmentStatus || 'Processing'}</span>
+                            </div>
+                        </td>
+                    `;
+                    ordersTbody.appendChild(tr);
+                });
+
+                noOrders.style.display = hasOrders ? 'none' : 'flex';
+                document.getElementById('orders-tbody').parentElement.parentElement.style.display = hasOrders ? 'block' : 'none';
             });
         });
 
@@ -830,14 +929,28 @@
                         });
                     }
 
-                    // Update batch reservedQty
+                    // Update batch reservedQty and simulate DMS synchronization
                     if (offer.batchID) {
                         const batchRef = doc(db, 'batches', offer.batchID);
                         await updateDoc(batchRef, {
                             reservedQty: increment(claimedQty),
+                            availableQuantity: increment(-claimedQty),
+                            inTransitQuantity: increment(claimedQty),
+                            status: 'In-Transit',
                             lastReservedAt: new Date()
                         });
                     }
+
+                    // Simulate DMS Bridge: Generate Sales Order
+                    await addDoc(collection(db, 'sales_orders'), {
+                        orderId: `ORD-${Date.now()}`,
+                        retailerId: auth.currentUser?.uid || '',
+                        batchId: offer.batchID || offer.batchNumber || null,
+                        claimedQuantity: claimedQty,
+                        fulfillmentStatus: 'Processing',
+                        productName: offer.productName || 'Promotional Product',
+                        createdAt: serverTimestamp()
+                    });
                 } else {
                     // 1. Mark live_campaign as reserved (locked) and update with claimed quantity
                     await updateDoc(doc(db, 'live_campaigns', id), {
@@ -860,7 +973,7 @@
                         timestamp: serverTimestamp()
                     });
 
-                    // 2. Free up the unaccepted quantity back to the batch
+                    // 2. Free up the unaccepted quantity back to the batch and simulate DMS synchronization
                     if (offer && offer.batchID) {
                         const unacceptedQty = offer.quantityAvailable - claimedQty;
                         const batchRef = doc(db, 'batches', offer.batchID);
@@ -869,17 +982,30 @@
                         if (batchSnap.exists()) {
                             const updates = {
                                 reservedQty: increment(claimedQty),
+                                availableQuantity: increment(-claimedQty),
+                                inTransitQuantity: increment(claimedQty),
+                                status: unacceptedQty > 0 ? 'escalated' : 'In-Transit',
                                 lastReservedAt: new Date()
                             };
                             
                             if (unacceptedQty > 0) {
                                 updates.promotedQty = increment(-unacceptedQty);
-                                updates.status = 'escalated'; // Return to queue so SM can offer the rest
                             }
                             
                             await updateDoc(batchRef, updates);
                         }
                     }
+
+                    // Simulate DMS Bridge: Generate Sales Order
+                    await addDoc(collection(db, 'sales_orders'), {
+                        orderId: `ORD-${Date.now()}`,
+                        retailerId: auth.currentUser?.uid || '',
+                        batchId: offer.batchID || offer.batchNumber || null,
+                        claimedQuantity: claimedQty,
+                        fulfillmentStatus: 'Processing',
+                        productName: offer.productName || 'Promotional Product',
+                        createdAt: serverTimestamp()
+                    });
                 }
 
                 closeAcceptModal();
