@@ -130,7 +130,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
 
     // The new PB15 header must be visible
     await expect(
-      page.locator('h2:has-text("Retailer Portal")')
+      page.locator('h2:has-text("Smart Procurement Feed")')
     ).toBeVisible({ timeout: 15000 });
 
     // The "PB15 Personalized" badge must be rendered
@@ -414,6 +414,128 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
     await expect(page.locator('#login-btn')).toBeVisible();
 
     console.log('✅ TC-07 PASS: Logout functionality verified on Sales Manager portal.');
+  });
+
+  // ─── TC-08: Promotion Analytics Tracking – Decline Reason ────────────────
+  test('TC-08 [Promotion Analytics]: Retailer can decline an offer and provide a reason', async ({ page }) => {
+    await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
+    await page.goto('/retailer_portal.html');
+
+    const offersContainer = page.locator('#offers-container');
+    const noOffersMsg = page.locator('#no-offers-msg');
+
+    // Wait for either the container to have cards or the empty state to show
+    await expect(async () => {
+      const cardsVisible = await offersContainer.locator('.bg-white').first().isVisible();
+      const emptyVisible = await noOffersMsg.isVisible();
+      expect(cardsVisible || emptyVisible).toBeTruthy();
+    }).toPass({ timeout: 15000 });
+
+    const declineBtns = page.locator('#offers-container button:has-text("Decline")');
+    const btnCount = await declineBtns.count();
+
+    if (btnCount > 0) {
+      await declineBtns.first().click();
+
+      // Modal must open
+      const modal = page.locator('#decline-modal-overlay').first();
+      await expect(modal).toHaveClass(/open/, { timeout: 8000 });
+
+      // Select a reason chip
+      const reasonChip = page.locator('.decline-reason-chip').first();
+      await expect(reasonChip).toBeVisible();
+      await reasonChip.click();
+
+      // Submit button should be enabled
+      const submitBtn = page.locator('#btn-submit-decline');
+      await expect(submitBtn).not.toBeDisabled();
+
+      // Submit the decline
+      await submitBtn.click();
+      
+      // Wait for the modal to close
+      await expect(modal).not.toHaveClass(/open/, { timeout: 8000 });
+
+      // Verify success modal appears
+      const successModal = page.locator('#success-modal-overlay');
+      await expect(successModal).toHaveClass(/open/, { timeout: 8000 });
+      await expect(page.locator('#success-modal-title')).toHaveText(/Done|Success/i);
+      
+      console.log('✅ TC-08 PASS: Decline reason captured, submitted, and success confirmation shown.');
+    } else {
+      console.log('ℹ️ TC-08 SKIP: No active offers to decline. Verifying empty state.');
+      const containerVisible = await offersContainer.locator('.bg-white').first().isVisible();
+      const noOfferVisible = await noOffersMsg.isVisible();
+      expect(containerVisible || noOfferVisible).toBeTruthy();
+    }
+  });
+
+  // ─── TC-09: Promotion Analytics Tracking – Accept Flow ──────────────────
+  test('TC-09 [Promotion Analytics]: Retailer can accept an offer and see success confirmation', async ({ page }) => {
+    await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
+    await page.goto('/retailer_portal.html');
+
+    const offersContainer = page.locator('#offers-container');
+    const noOffersMsg = page.locator('#no-offers-msg');
+
+    await expect(async () => {
+      const cardsVisible = await offersContainer.locator('.bg-white').first().isVisible();
+      const emptyVisible = await noOffersMsg.isVisible();
+      expect(cardsVisible || emptyVisible).toBeTruthy();
+    }).toPass({ timeout: 15000 });
+
+    const acceptBtns = page.locator('#offers-container button:has-text("Accept")');
+    const btnCount = await acceptBtns.count();
+
+    if (btnCount > 0) {
+      await acceptBtns.first().click();
+
+      // Modal must open
+      const modal = page.locator('#accept-modal-overlay').first();
+      await expect(modal).toHaveClass(/open/, { timeout: 8000 });
+
+      // Confirm claimed quantity is present
+      const qtyInput = page.locator('#claimed-quantity');
+      await expect(qtyInput).toBeVisible();
+
+      // Submit the acceptance
+      const confirmBtn = page.locator('#btn-submit-accept');
+      await confirmBtn.click();
+      
+      // Wait for modal to close
+      await expect(modal).not.toHaveClass(/open/, { timeout: 8000 });
+
+      // Verify success modal
+      const successModal = page.locator('#success-modal-overlay');
+      await expect(successModal).toHaveClass(/open/, { timeout: 8000 });
+      await expect(page.locator('#success-modal-title')).toHaveText(/Successful|Done/i);
+      
+      console.log('✅ TC-09 PASS: Accept flow completed and success confirmation shown.');
+    } else {
+      console.log('ℹ️ TC-09 SKIP: No active offers to accept.');
+    }
+  });
+
+  // ─── TC-10: Promotion Analytics Dashboard ──────────────────────────────
+  test('TC-10 [Promotion Analytics]: Analyst Dashboard renders charts and KPI cards', async ({ page }) => {
+    // Analytics is typically for Sales Managers/Planners
+    await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
+    await page.goto('/analyst_dashboard.html');
+
+    // Confirm heading
+    await expect(page.locator('h1:has-text("Promotion Analytics")')).toBeVisible({ timeout: 15000 });
+
+    // Confirm KPI cards
+    await expect(page.locator('#kpi-total')).toBeVisible();
+    await expect(page.locator('#kpi-accepted')).toBeVisible();
+    await expect(page.locator('#kpi-declined')).toBeVisible();
+
+    // Confirm charts
+    await expect(page.locator('#chart-bar')).toBeVisible();
+    await expect(page.locator('#chart-pie')).toBeVisible();
+    await expect(page.locator('#chart-trend')).toBeVisible();
+
+    console.log('✅ TC-10 PASS: Promotion Analytics dashboard rendered all KPIs and charts.');
   });
 
 });

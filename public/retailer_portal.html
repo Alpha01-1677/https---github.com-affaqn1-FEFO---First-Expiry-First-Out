@@ -188,7 +188,7 @@
         <main class="flex-1 overflow-y-auto p-8 lg:p-10">
             <div id="tab-offers" class="max-w-4xl">
                 <div class="flex items-center gap-3 mb-2">
-                    <h2 class="text-2xl font-bold text-slate-800">Retailer Portal</h2>
+                    <h2 class="text-2xl font-bold text-slate-800">Smart Procurement Feed</h2>
                     <span class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full uppercase tracking-widest border border-purple-200">PB15 Personalized</span>
                 </div>
                 <p class="text-slate-500 mb-8">Curated promotional offers tailored to your store's historical sales velocity and capacity.</p>
@@ -326,10 +326,24 @@
         </div>
     </div>
 
+    <!-- ── Success Modal ── -->
+    <div class="ej-modal-overlay" id="success-modal-overlay" onclick="closeSuccessModal(event)">
+        <div class="ej-modal" onclick="event.stopPropagation()" style="max-width:320px; text-align:center; padding:40px 24px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#d1fae5; color:#10b981; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h2 id="success-modal-title" style="font-size:20px; font-weight:700; color:#0f172a; margin-bottom:8px;">Done!</h2>
+            <p id="success-modal-desc" style="font-size:14px; color:#64748b; margin-bottom:24px;">Action was successful.</p>
+            <button onclick="closeSuccessModal()" style="width:100%; padding:12px; border-radius:12px; border:none; background:#10b981; color:#fff; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.2); transition:all 0.2s ease;">Continue</button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment, getDoc, addDoc, serverTimestamp, or, and } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDocs, increment, getDoc, addDoc, serverTimestamp, or, and, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
@@ -351,6 +365,7 @@
         }
 
         let currentOffers = {};
+        let currentRenderId = 0;
 
         window.showTab = function(tab) {
             document.getElementById('tab-offers').style.display = tab === 'offers' ? 'block' : 'none';
@@ -380,29 +395,21 @@
                 )
             );
             onSnapshot(q, async snap => {
-                const offersContainer = document.getElementById('offers-container');
-                const liveContainer = document.getElementById('live-container');
-                const noOffers = document.getElementById('no-offers-msg');
-                const noLive = document.getElementById('no-live-msg');
+                const renderId = ++currentRenderId;
                 
-                offersContainer.innerHTML = '';
-                liveContainer.innerHTML = '';
-                currentOffers = {};
-
-                let hasOffers = false;
-                let hasLive = false;
-
                 // PB15: Fetch historical data for personalization
                 const historyQ = query(collection(db, 'live_campaigns'), where('retailerID', '==', user.uid), where('status', 'in', ['ended', 'reserved']));
                 const historySnap = await getDocs(historyQ);
                 
+                if (renderId !== currentRenderId) return;
+
                 const userPreferences = {};
                 let totalPastClaims = 0;
 
                 historySnap.forEach(d => {
                     const data = d.data();
                     const prodName = data.productName || '';
-                    const category = prodName.split(' ')[0] || 'General'; // Simplified category heuristic
+                    const category = prodName.split(' ')[0] || 'General';
                     
                     if (!userPreferences[category]) {
                         userPreferences[category] = { claims: 0, totalVelocity: 0, count: 0 };
@@ -425,31 +432,38 @@
                     affinity[cat] = (avgVelocity * 0.7) + (claimRatio * 0.3); 
                 }
 
-                let activeOffersList = [];
+                let activeOffersMap = new Map(); // Use Map to deduplicate by batchID/batchNumber
+                let liveCardPromises = [];
+                let newCurrentOffers = {};
 
                 for (const d of snap.docs) {
                     const offer = d.data();
                     const offerId = d.id;
-                    currentOffers[offerId] = offer;
+                    newCurrentOffers[offerId] = offer;
+
+                    // PB15: Ignore offers the user has already interacted with
+                    if (offer.interactedBy && offer.interactedBy.includes(user.uid)) {
+                        continue;
+                    }
 
                     if (offer.status === 'active') {
-                        hasOffers = true;
+                        // Deduplication logic: keyed by batchID or batchNumber + productName
+                        const dedupeKey = offer.batchID || `${offer.productName}-${offer.batchNumber}`;
                         
-                        // PB15: Calculate Match Score
+                        // If we already have this offer, keep the one with the higher discount or just skip
+                        if (activeOffersMap.has(dedupeKey)) continue;
+
                         const category = (offer.productName || '').split(' ')[0] || 'General';
-                        let matchScore = affinity[category] || 0.1; // Default low affinity if never bought
+                        let matchScore = affinity[category] || 0.1;
                         
-                        // Boost score if expiring soon (urgency)
                         const daysLeft = offer.endDate ? Math.ceil((new Date(offer.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 30;
                         if (daysLeft < 10) matchScore += 0.2;
                         
-                        // Calculate Smart Quantity Suggestion
                         const maxQty = offer.quantityAvailable || 0;
                         const avgVelocityForCategory = (userPreferences[category] && userPreferences[category].count > 0) 
                             ? userPreferences[category].totalVelocity / userPreferences[category].count 
-                            : 0.5; // Default 50%
+                            : 0.5;
                         
-                        // Smart Quantity: Based on avg velocity they achieved in this category
                         let smartQty = Math.max(1, Math.round(maxQty * avgVelocityForCategory));
                         if (smartQty > maxQty) smartQty = maxQty;
                         
@@ -457,18 +471,36 @@
                         offer.smartCategory = category;
                         offer.smartQuantity = smartQty;
 
-                        activeOffersList.push({ offer, offerId });
+                        activeOffersMap.set(dedupeKey, { offer, offerId });
                     } else if (offer.status === 'reserved') {
-                        hasLive = true;
-                        await renderLiveCard(offer, offerId, liveContainer);
+                        liveCardPromises.push(createLiveCard(offer, offerId));
                     }
                 }
 
-                // PB15: Sort offers by Smart Score descending
+                const liveCards = await Promise.all(liveCardPromises);
+
+                if (renderId !== currentRenderId) return;
+
+                currentOffers = newCurrentOffers;
+
+                const offersContainer = document.getElementById('offers-container');
+                const liveContainer = document.getElementById('live-container');
+                const noOffers = document.getElementById('no-offers-msg');
+                const noLive = document.getElementById('no-live-msg');
+                
+                offersContainer.innerHTML = '';
+                liveContainer.innerHTML = '';
+
+                let activeOffersList = Array.from(activeOffersMap.values());
+                let hasOffers = activeOffersList.length > 0;
+                let hasLive = liveCards.length > 0;
+
+                liveCards.forEach(card => liveContainer.appendChild(card));
+
                 activeOffersList.sort((a, b) => b.offer.smartScore - a.offer.smartScore);
                 
                 activeOffersList.forEach((item, index) => {
-                    const isTopMatch = index === 0 && item.offer.smartScore > 0.1; // Highlight the top match if score > 0.1
+                    const isTopMatch = index === 0 && item.offer.smartScore > 0.1;
                     renderOfferCard(item.offer, item.offerId, offersContainer, isTopMatch);
                 });
 
@@ -519,7 +551,7 @@
             container.appendChild(card);
         }
 
-        async function renderLiveCard(campaign, id, container) {
+        async function createLiveCard(campaign, id) {
             let expiryDate = 'N/A';
             let totalQty = campaign.quantityAvailable || 0;
             let batchNumber = campaign.batchNumber || 'N/A';
@@ -594,7 +626,7 @@
                     </div>
                 </div>
             `;
-            container.appendChild(card);
+            return card;
         }
 
         // ── Decline Modal Logic ──
@@ -669,13 +701,18 @@
                         declineReason: reason,
                         declinedAt: serverTimestamp()
                     });
+                } else if (offer && offer.retailerID === 'ALL') {
+                    // Mark this specific retailer as having interacted so it hides
+                    await updateDoc(doc(db, 'live_campaigns', id), {
+                        interactedBy: arrayUnion(auth.currentUser.uid)
+                    });
                 }
 
                 // Close the modal
                 document.getElementById('decline-modal-overlay').classList.remove('open');
 
                 // Show a brief toast acknowledgement
-                showToast('Feedback recorded. Thank you!');
+                showSuccessModal('Done!', 'Offer declined successfully.');
             } catch (e) {
                 console.error('Error logging decline:', e);
                 alert('Could not save your feedback. Please try again.');
@@ -685,19 +722,16 @@
             }
         };
 
-        // Simple toast helper
-        function showToast(msg) {
-            let toast = document.getElementById('feedback-toast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'feedback-toast';
-                toast.style.cssText = 'position:fixed;bottom:28px;right:28px;background:#1e293b;color:#fff;padding:12px 22px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:99999;transition:opacity 0.3s ease;';
-                document.body.appendChild(toast);
-            }
-            toast.textContent = msg;
-            toast.style.opacity = '1';
-            setTimeout(() => { toast.style.opacity = '0'; }, 2800);
-        }
+        window.showSuccessModal = function(title, desc) {
+            document.getElementById('success-modal-title').textContent = title;
+            document.getElementById('success-modal-desc').textContent = desc;
+            document.getElementById('success-modal-overlay').classList.add('open');
+        };
+
+        window.closeSuccessModal = function(evt) {
+            if (evt && evt.target && evt.target !== document.getElementById('success-modal-overlay')) return;
+            document.getElementById('success-modal-overlay').classList.remove('open');
+        };
 
         window.openAcceptModal = function(id) {
             const offer = currentOffers[id];
@@ -784,13 +818,15 @@
                     // Update the ALL campaign's quantity or close it
                     if (remainingQty > 0) {
                         await updateDoc(doc(db, 'live_campaigns', id), {
-                            quantityAvailable: increment(-claimedQty)
+                            quantityAvailable: increment(-claimedQty),
+                            interactedBy: arrayUnion(auth.currentUser?.uid)
                         });
                     } else {
                         // Fully claimed
                         await updateDoc(doc(db, 'live_campaigns', id), {
                             status: 'ended',
-                            quantityAvailable: 0
+                            quantityAvailable: 0,
+                            interactedBy: arrayUnion(auth.currentUser?.uid)
                         });
                     }
 
@@ -847,6 +883,7 @@
                 }
 
                 closeAcceptModal();
+                showSuccessModal('Successful!', 'Offer accepted successfully.');
             } catch (e) {
                 console.error(e);
                 alert('Error accepting campaign');
