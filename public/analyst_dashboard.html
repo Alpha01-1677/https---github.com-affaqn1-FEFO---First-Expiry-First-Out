@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nestlé SSAMS — Promotion Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-[#f1f5f9] flex h-screen overflow-hidden">
+    <div id="shell"></div>
+
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div id="header-slot"></div>
+
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-8">
+                <div class="stat-card">
+                    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;">Total Interactions</div>
+                    <div id="kpi-total" style="font-size:32px;font-weight:800;color:#0f172a;margin-top:6px;font-family:'DM Mono',monospace;">—</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;">Accepted</div>
+                    <div id="kpi-accepted" style="font-size:32px;font-weight:800;color:#16a34a;margin-top:6px;font-family:'DM Mono',monospace;">—</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;">Declined</div>
+                    <div id="kpi-declined" style="font-size:32px;font-weight:800;color:#dc2626;margin-top:6px;font-family:'DM Mono',monospace;">—</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;">Acceptance Rate</div>
+                    <div id="kpi-rate" style="font-size:32px;font-weight:800;color:#0057B8;margin-top:6px;font-family:'DM Mono',monospace;">—</div>
+                </div>
+            </div>
+
+            <!-- Charts Row 1: Bar + Pie -->
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+                <div class="lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:4px;">Accepted vs Declined by Category</div>
+                    <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Product category breakdown of retailer responses</div>
+                    <div style="position:relative;height:280px;">
+                        <canvas id="chart-bar"></canvas>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:4px;">Decline Reason Distribution</div>
+                    <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Why retailers are passing on offers</div>
+                    <div style="position:relative;height:280px;">
+                        <canvas id="chart-pie"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trend Chart -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+                <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:4px;">Interaction Trend (Last 30 Days)</div>
+                <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Daily accept / decline volume over time</div>
+                <div style="position:relative;height:220px;">
+                    <canvas id="chart-trend"></canvas>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Suppression Alerts + Retailer Propensity -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+                <!-- Category Suppression Signals -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div style="padding:18px 24px;border-bottom:1px solid #f1f5f9;">
+                        <div style="font-size:15px;font-weight:700;color:#0f172a;">⚠️ Suppression Signals</div>
+                        <div style="font-size:12px;color:#64748b;margin-top:2px;">Categories with &gt;60% decline rate — consider pausing offers</div>
+                    </div>
+                    <div id="suppression-body" style="padding:16px 24px;">
+                        <div style="text-align:center;color:#94a3b8;padding:24px;font-size:13px;">Loading…</div>
+                    </div>
+                </div>
+
+                <!-- Retailer Propensity Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div style="padding:18px 24px;border-bottom:1px solid #f1f5f9;">
+                        <div style="font-size:15px;font-weight:700;color:#0f172a;">🎯 Retailer Propensity</div>
+                        <div style="font-size:12px;color:#64748b;margin-top:2px;">Acceptance rate by retailer (top 10)</div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="data-table" style="min-width:360px;">
+                            <thead>
+                                <tr>
+                                    <th>Retailer ID</th>
+                                    <th>Accepted</th>
+                                    <th>Declined</th>
+                                    <th>Rate</th>
+                                    <th>Signal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="propensity-body">
+                                <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px;">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interaction Log Table -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div style="padding:20px 24px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:15px;font-weight:700;color:#0f172a;">Interaction Log</div>
+                        <div style="font-size:12px;color:#64748b;margin-top:2px;">Recent promotion accept / decline events (latest 100)</div>
+                    </div>
+                    <select id="filter-action" onchange="applyFilter()" style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:600;color:#475569;outline:none;cursor:pointer;">
+                        <option value="all">All Actions</option>
+                        <option value="accepted">Accepted Only</option>
+                        <option value="declined">Declined Only</option>
+                    </select>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" style="min-width:720px;">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Promotion</th>
+                                <th>Action</th>
+                                <th>Reason / Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-body">
+                            <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">Loading interactions…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { buildSidebar, buildHeader, startClock, requireAuth } from './sidebar.js';
+
+        if (!requireAuth()) throw new Error('Not authenticated');
+
+        document.getElementById('shell').outerHTML = buildSidebar('analyst_dashboard');
+        document.getElementById('header-slot').outerHTML = buildHeader('Promotion Analytics', 'Propensity scoring & decline reason analysis');
+        startClock();
+
+        const app = initializeApp({
+            apiKey: "AIzaSyCvhJluiWt-10DLKMHgIHdI04f_xRRUWhU",
+            authDomain: "auth-2fda3.firebaseapp.com",
+            projectId: "auth-2fda3",
+            storageBucket: "auth-2fda3.firebasestorage.app",
+            messagingSenderId: "593009113366",
+            appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
+        });
+        const auth = getAuth(app);
+        const db   = getFirestore(app);
+
+        window.doLogout = async function() {
+            await signOut(auth);
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        };
+
+        // ── Chart instances ──
+        let barChart   = null;
+        let pieChart   = null;
+        let trendChart = null;
+        let allInteractions = [];
+
+        const PALETTE = {
+            green:   'rgba(22,163,74,0.85)',
+            red:     'rgba(220,38,38,0.85)',
+            greenLine: 'rgba(22,163,74,1)',
+            redLine:   'rgba(220,38,38,1)',
+            greenFill: 'rgba(22,163,74,0.10)',
+            redFill:   'rgba(220,38,38,0.10)',
+        };
+
+        const PIE_COLORS = [
+            '#ef4444','#f97316','#eab308','#6366f1','#06b6d4','#8b5cf6','#ec4899','#10b981'
+        ];
+
+        // ── Real-time listener ──
+        const q = query(collection(db, 'promotion_interactions'), orderBy('timestamp', 'desc'));
+        onSnapshot(q, snap => {
+            allInteractions = [];
+            snap.forEach(d => {
+                const data = d.data();
+                data._id = d.id;
+                allInteractions.push(data);
+            });
+            renderAll();
+        });
+
+        function renderAll() {
+            renderKPIs();
+            renderBarChart();
+            renderPieChart();
+            renderTrendChart();
+            renderSuppressionSignals();
+            renderPropensityTable();
+            renderTable();
+        }
+
+        // ── KPIs ──
+        function renderKPIs() {
+            const total    = allInteractions.length;
+            const accepted = allInteractions.filter(i => i.action === 'accepted').length;
+            const declined = allInteractions.filter(i => i.action === 'declined').length;
+            const rate     = total > 0 ? Math.round((accepted / total) * 100) : 0;
+
+            document.getElementById('kpi-total').textContent    = total;
+            document.getElementById('kpi-accepted').textContent = accepted;
+            document.getElementById('kpi-declined').textContent = declined;
+            document.getElementById('kpi-rate').textContent     = rate + '%';
+        }
+
+        // ── Stacked Bar: Accepted vs Declined by Category ──
+        function renderBarChart() {
+            const catMap = {};
+            allInteractions.forEach(i => {
+                const cat = i.category || 'Other';
+                if (!catMap[cat]) catMap[cat] = { accepted: 0, declined: 0 };
+                if (i.action === 'accepted') catMap[cat].accepted++;
+                else if (i.action === 'declined') catMap[cat].declined++;
+            });
+
+            const labels       = Object.keys(catMap);
+            const acceptedData = labels.map(l => catMap[l].accepted);
+            const declinedData = labels.map(l => catMap[l].declined);
+
+            const ctx = document.getElementById('chart-bar').getContext('2d');
+            if (barChart) barChart.destroy();
+            barChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Accepted', data: acceptedData, backgroundColor: PALETTE.green, borderRadius: 6, borderSkipped: false },
+                        { label: 'Declined', data: declinedData, backgroundColor: PALETTE.red,   borderRadius: 6, borderSkipped: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true, pointStyle: 'circle' } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                        y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        // ── Doughnut: Decline Reasons ──
+        function renderPieChart() {
+            const reasonMap = {};
+            allInteractions.filter(i => i.action === 'declined').forEach(i => {
+                const r = i.reason || 'Unknown';
+                reasonMap[r] = (reasonMap[r] || 0) + 1;
+            });
+
+            const labels = Object.keys(reasonMap);
+            const data   = labels.map(l => reasonMap[l]);
+
+            const ctx = document.getElementById('chart-pie').getContext('2d');
+            if (pieChart) pieChart.destroy();
+
+            if (labels.length === 0) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.font = '13px DM Sans'; ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center';
+                ctx.fillText('No decline data yet', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            pieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{ data, backgroundColor: PIE_COLORS.slice(0, labels.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '55%',
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } } }
+                }
+            });
+        }
+
+        // ── Line: Trend over 30 days ──
+        function renderTrendChart() {
+            const days = 30;
+            const buckets = {};
+            const today = new Date();
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                const key = d.toISOString().slice(0, 10);
+                buckets[key] = { accepted: 0, declined: 0 };
+            }
+
+            allInteractions.forEach(item => {
+                const ts = item.timestamp?.toDate ? item.timestamp.toDate() : null;
+                if (!ts) return;
+                const key = ts.toISOString().slice(0, 10);
+                if (buckets[key]) {
+                    if (item.action === 'accepted') buckets[key].accepted++;
+                    else if (item.action === 'declined') buckets[key].declined++;
+                }
+            });
+
+            const labels       = Object.keys(buckets).map(k => {
+                const [y, m, d] = k.split('-');
+                return `${d}/${m}`;
+            });
+            const acceptedData = Object.values(buckets).map(b => b.accepted);
+            const declinedData = Object.values(buckets).map(b => b.declined);
+
+            const ctx = document.getElementById('chart-trend').getContext('2d');
+            if (trendChart) trendChart.destroy();
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Accepted', data: acceptedData,
+                            borderColor: PALETTE.greenLine, backgroundColor: PALETTE.greenFill,
+                            tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 5,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Declined', data: declinedData,
+                            borderColor: PALETTE.redLine, backgroundColor: PALETTE.redFill,
+                            tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 5,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true, pointStyle: 'circle' } } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 10 } },
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        // ── Suppression Signals ──
+        function renderSuppressionSignals() {
+            const catMap = {};
+            allInteractions.forEach(i => {
+                const cat = i.category || 'Other';
+                if (!catMap[cat]) catMap[cat] = { accepted: 0, declined: 0 };
+                if (i.action === 'accepted') catMap[cat].accepted++;
+                else catMap[cat].declined++;
+            });
+
+            const container = document.getElementById('suppression-body');
+            const flagged   = Object.entries(catMap)
+                .map(([cat, v]) => {
+                    const total = v.accepted + v.declined;
+                    const declineRate = total > 0 ? Math.round((v.declined / total) * 100) : 0;
+                    return { cat, total, declineRate, ...v };
+                })
+                .filter(c => c.declineRate >= 60 && c.total >= 2)
+                .sort((a, b) => b.declineRate - a.declineRate);
+
+            if (flagged.length === 0) {
+                container.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:10px;padding:16px 0;color:#16a34a;">
+                        <span style="font-size:22px;">✅</span>
+                        <div>
+                            <div style="font-weight:700;font-size:13px;">No suppression needed</div>
+                            <div style="font-size:12px;color:#64748b;margin-top:2px;">All categories are performing above the 60% decline threshold.</div>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = flagged.map(c => {
+                const barPct = c.declineRate;
+                const severity = barPct >= 80 ? '#dc2626' : '#f59e0b';
+                return `
+                    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f1f5f9;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                            <div style="font-size:13px;font-weight:700;color:#0f172a;">${c.cat}</div>
+                            <span style="font-size:11px;font-weight:700;color:#fff;background:${severity};padding:3px 10px;border-radius:999px;">${c.declineRate}% decline</span>
+                        </div>
+                        <div style="height:5px;border-radius:3px;background:#f1f5f9;overflow:hidden;">
+                            <div style="height:100%;width:${barPct}%;background:${severity};border-radius:3px;transition:width 0.5s;"></div>
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:5px;">${c.declined} declined / ${c.total} total — Recommend pausing offers in this category</div>
+                    </div>`;
+            }).join('');
+        }
+
+        // ── Retailer Propensity Table ──
+        function renderPropensityTable() {
+            const retailerMap = {};
+            allInteractions.forEach(i => {
+                const rid = i.retailerID || 'Unknown';
+                if (!retailerMap[rid]) retailerMap[rid] = { accepted: 0, declined: 0 };
+                if (i.action === 'accepted') retailerMap[rid].accepted++;
+                else retailerMap[rid].declined++;
+            });
+
+            const rows = Object.entries(retailerMap)
+                .map(([rid, v]) => {
+                    const total = v.accepted + v.declined;
+                    const rate  = total > 0 ? Math.round((v.accepted / total) * 100) : 0;
+                    return { rid, total, rate, ...v };
+                })
+                .sort((a, b) => b.rate - a.rate)
+                .slice(0, 10);
+
+            const tbody = document.getElementById('propensity-body');
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px;">No data yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => {
+                const signal = r.rate >= 70
+                    ? '<span style="color:#16a34a;font-weight:700;font-size:11px;">🔥 High</span>'
+                    : r.rate >= 40
+                        ? '<span style="color:#d97706;font-weight:700;font-size:11px;">⚡ Medium</span>'
+                        : '<span style="color:#dc2626;font-weight:700;font-size:11px;">❄️ Low</span>';
+
+                const shortId = r.rid.length > 16 ? r.rid.slice(0, 8) + '…' + r.rid.slice(-4) : r.rid;
+
+                return `<tr>
+                    <td style="font-family:'DM Mono',monospace;font-size:11px;color:#475569;" title="${r.rid}">${shortId}</td>
+                    <td style="color:#16a34a;font-weight:700;">${r.accepted}</td>
+                    <td style="color:#dc2626;font-weight:700;">${r.declined}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="height:5px;width:60px;border-radius:3px;background:#f1f5f9;overflow:hidden;">
+                                <div style="height:100%;width:${r.rate}%;background:${r.rate>=70?'#16a34a':r.rate>=40?'#f59e0b':'#dc2626'};border-radius:3px;"></div>
+                            </div>
+                            <span style="font-size:12px;font-weight:700;font-family:'DM Mono',monospace;">${r.rate}%</span>
+                        </div>
+                    </td>
+                    <td>${signal}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ── Interaction Log Table ──
+        function renderTable() {
+            const filterVal = document.getElementById('filter-action')?.value || 'all';
+            const filtered  = filterVal === 'all' ? allInteractions : allInteractions.filter(i => i.action === filterVal);
+
+            const tbody = document.getElementById('log-body');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">No interactions recorded yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.slice(0, 100).map(i => {
+                const ts = i.timestamp?.toDate
+                    ? i.timestamp.toDate().toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+                    : '—';
+                const actionBadge = i.action === 'accepted'
+                    ? '<span class="badge badge-green">Accepted</span>'
+                    : '<span class="badge badge-red">Declined</span>';
+                const detail = i.action === 'declined'
+                    ? (i.reason || '—')
+                    : (i.claimedQty ? `${i.claimedQty} units` : '—');
+
+                return `<tr>
+                    <td style="font-family:'DM Mono',monospace;font-size:12px;color:#64748b;">${ts}</td>
+                    <td style="font-weight:600;color:#0f172a;">${i.productName || '—'}</td>
+                    <td><span class="badge badge-blue">${i.category || '—'}</span></td>
+                    <td style="font-size:13px;color:#475569;">${i.promotionTitle || '—'}</td>
+                    <td>${actionBadge}</td>
+                    <td style="font-size:12px;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${detail}">${detail}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.applyFilter = renderTable;
+    </script>
+</body>
+</html>

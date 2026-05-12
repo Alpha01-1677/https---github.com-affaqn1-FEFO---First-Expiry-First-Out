@@ -281,6 +281,13 @@ export const NAV_PAGES = [
         href: 'audit_logs.html',
         subtitle: 'Immutable Financial Action Audit Trail',
         icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>`
+    },
+    {
+        id: 'analyst_dashboard',
+        label: 'Promotion Analytics',
+        href: 'analyst_dashboard.html',
+        subtitle: 'Propensity scoring and decline analysis',
+        icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>`
     }
 ];
 
@@ -307,10 +314,10 @@ export function buildSidebar(activePage) {
         visiblePages = NAV_PAGES;
     } else if (isAuditor) {
         // Auditors see Dashboard, Financial ROI, and Audit Logs
-        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'financial_roi' || p.id === 'audit_logs');
+        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'financial_roi' || p.id === 'audit_logs' || p.id === 'analyst_dashboard');
     } else if (isSalesManager) {
         // Sales Managers see Dashboard, Sales Manager Portal, Scorecard, and Audit Logs
-        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'sales_manager_portal' || p.id === 'retailer_scorecard' || p.id === 'audit_logs');
+        visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'sales_manager_portal' || p.id === 'retailer_scorecard' || p.id === 'audit_logs' || p.id === 'analyst_dashboard');
     } else if (isPlanner || isLogistics) {
         // Planners and Logistics Managers see Dashboard and Collaboration Portal
         visiblePages = NAV_PAGES.filter(p => p.id === 'dashboard' || p.id === 'collaboration');
