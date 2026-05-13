@@ -514,11 +514,27 @@
                             : 0.5;
                         
                         let smartQty = Math.max(1, Math.round(maxQty * avgVelocityForCategory));
-                        if (smartQty > maxQty) smartQty = maxQty;
+                        
+                        // PB15: Personalization Scenarios & Smart Quantity
+                        let badgeType = "";
+                        if (avgVelocityForCategory >= 0.8) {
+                            badgeType = "High Velocity Match";
+                            smartQty = Math.min(maxQty, Math.max(100, Math.round(maxQty * avgVelocityForCategory))); // Scenario 1
+                        } else if (avgVelocityForCategory < 0.3 && daysLeft <= 14) {
+                            badgeType = "Top Match";
+                            smartQty = Math.min(maxQty, Math.max(1, Math.round(daysLeft * 2))); // Scenario 3: Cautious Buyer
+                        } else if ((affinity[category] || 0) > 0.6) {
+                            badgeType = "Proven Category Success"; // Scenario 2
+                            smartQty = Math.min(maxQty, Math.round(maxQty * avgVelocityForCategory));
+                        } else {
+                            badgeType = "Top Match";
+                            if (smartQty > maxQty) smartQty = maxQty;
+                        }
                         
                         offer.smartScore = matchScore;
                         offer.smartCategory = category;
                         offer.smartQuantity = smartQty;
+                        offer.badgeType = badgeType;
 
                         activeOffersMap.set(dedupeKey, { offer, offerId });
                     } else if (offer.status === 'reserved') {
@@ -611,11 +627,12 @@
         function renderOfferCard(offer, id, container, isTopMatch = false) {
             const discount = offer.discountPercent || 0;
             const qty = offer.quantityAvailable || 0;
+            const badgeLabel = offer.badgeType || "Top Match";
             
             const badgeHtml = isTopMatch 
                 ? `<div class="mb-3 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-lg flex items-center gap-2">
                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                       <span class="text-[11px] font-bold text-purple-700">Top Match: Based on past success with ${offer.smartCategory}</span>
+                       <span class="text-[11px] font-bold text-purple-700">${badgeLabel}: Based on past success with ${offer.smartCategory}</span>
                    </div>`
                 : '';
 
@@ -625,7 +642,7 @@
                 ${badgeHtml}
                 <div class="mb-4">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="inline-block px-3 py-1 ${isTopMatch ? 'bg-purple-100 text-purple-800' : 'bg-blue-50 text-blue-700'} text-[10px] font-bold rounded-full uppercase tracking-wider">${isTopMatch ? 'Recommended' : 'New Offer'}</span>
+                        <span class="inline-block px-3 py-1 ${isTopMatch ? 'bg-purple-100 text-purple-800' : 'bg-blue-50 text-blue-700'} text-[10px] font-bold rounded-full uppercase tracking-wider">${isTopMatch ? badgeLabel : 'New Offer'}</span>
                         <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">${discount}% Off</span>
                     </div>
                     <h3 class="text-lg font-bold text-slate-800">${offer.productName || 'N/A'}</h3>
