@@ -257,6 +257,8 @@
         let currentRetailerName = '';
         let liveProducts = {}; // Map of productName -> qty
         let unsubHistory = null;
+        let selectedProduct = null;
+        let orderHistory = [];
 
         // UI Utils
         const $ = id => document.getElementById(id);
@@ -341,6 +343,7 @@
                     $('main-portal').style.display = 'block';
                     $('retailer-name-display').textContent = currentRetailerName;
                     
+                    startLiveStockListener();
                     startHistoryListener(user.uid);
                 } else {
                     await signOut(auth);
@@ -348,6 +351,7 @@
             } else {
                 currentUser = null;
                 if (unsubHistory) unsubHistory();
+                if (unsubStock) unsubStock();
                 $('main-portal').style.display = 'none';
                 $('auth-portal').style.display = 'block';
             }

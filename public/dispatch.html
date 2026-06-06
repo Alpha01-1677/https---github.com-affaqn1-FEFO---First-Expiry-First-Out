@@ -6,10 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nestlé SSAMS — FEFO Dispatch · PB4</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
     <style>
-        .dispatch-approved { background:#f0fdf4; border:1px solid #86efac; }
-        .dispatch-rejected { background:#fff1f2; border:1px solid #fca5a5; }
+        .dispatch-approved {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+        }
+
+        .dispatch-rejected {
+            background: #fff1f2;
+            border: 1px solid #fca5a5;
+        }
     </style>
 </head>
 
@@ -30,10 +39,32 @@
 
                     <!-- Pending Orders (PB4 Sidebar) -->
                     <div class="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col h-[525px]">
-                        <h3 class="font-semibold text-slate-900 mb-1 flex items-center gap-2">
-                            Pending Orders
-                        </h3>
-                        <p class="text-[11px] text-slate-400 mb-4">Select an incoming retailer request to process.</p>
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <h3 class="font-semibold text-slate-900 mb-1 flex items-center gap-2">Pending Orders</h3>
+                                <p class="text-[11px] text-slate-400">Select an incoming retailer request to process.</p>
+                            </div>
+                            <button onclick="toggleFilter()" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Filter pending requests">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Filter Form -->
+                        <div id="pending-filter-form" class="hidden mb-3 p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs">
+                            <div class="space-y-2.5">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Product</label>
+                                    <select id="filter-product" class="w-full border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-300 bg-white">
+                                        <option value="">All Products</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Min Quantity</label>
+                                    <input type="number" id="filter-qty" class="w-full border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-300 bg-white" placeholder="e.g. 50" min="0">
+                                </div>
+                                <button onclick="applyPendingFilter()" class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-1.5 rounded transition-colors mt-1">Apply Filter</button>
+                            </div>
+                        </div>
                         <div id="pending-orders-list" class="flex-1 overflow-y-auto pr-1 space-y-3">
                             <div class="text-sm text-slate-400 text-center py-8">Loading requests…</div>
                         </div>
@@ -44,36 +75,44 @@
                         <h3 class="font-semibold text-slate-900 mb-1 flex items-center gap-2">
                             New Dispatch Order
                         </h3>
-                        <p class="text-xs text-slate-400 mb-5">The system will automatically select batches using FEFO and validate MRSL compliance.</p>
+                        <p class="text-xs text-slate-400 mb-5">The system will automatically select batches using FEFO
+                            and validate MRSL compliance.</p>
 
                         <div class="space-y-4">
                             <div>
-                                <label class="form-label">Retailer / Destination <span class="text-red-400">*</span></label>
-                                <input id="dispatch-retailer" type="text" class="form-input" placeholder="e.g. Metro Supermarkets — Colombo" />
+                                <label class="form-label">Retailer / Destination <span
+                                        class="text-red-400">*</span></label>
+                                <input id="dispatch-retailer" type="text" class="form-input"
+                                    placeholder="e.g. Metro Supermarkets — Colombo" />
                             </div>
                             <div>
                                 <label class="form-label">Product Name <span class="text-red-400">*</span></label>
-                                <input id="dispatch-product" type="text" class="form-input" placeholder="e.g. Nescafé Gold 200g" />
+                                <input id="dispatch-product" type="text" class="form-input"
+                                    placeholder="e.g. Nescafé Gold 200g" />
                                 <p class="text-[10px] text-slate-400 mt-1">Partial match supported (e.g. "Nescafé")</p>
                             </div>
                             <div>
-                                <label class="form-label">Quantity Required (units) <span class="text-red-400">*</span></label>
+                                <label class="form-label">Quantity Required (units) <span
+                                        class="text-red-400">*</span></label>
                                 <input id="dispatch-qty" type="number" class="form-input" placeholder="200" min="1" />
                             </div>
                             <div>
                                 <label class="form-label">Warehouse Location <span class="text-red-400">*</span></label>
-                                <input id="dispatch-location" type="text" class="form-input" placeholder="e.g. Colombo-01" />
+                                <input id="dispatch-location" type="text" class="form-input"
+                                    placeholder="e.g. Colombo-01" />
                             </div>
                             <div>
                                 <label class="form-label">MRSL Threshold (days)</label>
                                 <input id="dispatch-mrsl-days" type="number" class="form-input" value="30" min="1" />
-                                <p class="text-xs text-slate-400 mt-1.5">Min days before expiry (also enforces 20% shelf life rule)</p>
+                                <p class="text-xs text-slate-400 mt-1.5">Min days before expiry (also enforces 20% shelf
+                                    life rule)</p>
                             </div>
                             <button onclick="processDispatch()" id="dispatch-btn"
-                                    class="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all"
-                                    style="background:linear-gradient(135deg,var(--nestle-blue),var(--nestle-light-blue));">
+                                class="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all"
+                                style="background:linear-gradient(135deg,var(--nestle-blue),var(--nestle-light-blue));">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7" />
                                 </svg>
                                 <span id="dispatch-btn-text">Process FEFO Dispatch</span>
                             </button>
@@ -83,12 +122,13 @@
                     <!-- Result panel -->
                     <div class="bg-white rounded-2xl border border-slate-100 p-6">
                         <h3 class="font-semibold text-slate-900 mb-1">Dispatch Validation Result</h3>
-                        <p class="text-xs text-slate-400 mb-4">Results of FEFO batch selection + MRSL compliance check</p>
+                        <p class="text-xs text-slate-400 mb-4">Results of FEFO batch selection + MRSL compliance check
+                        </p>
                         <div id="dispatch-result-area">
                             <div class="flex flex-col items-center justify-center h-48 text-slate-300">
                                 <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
                                 <p class="text-sm">No dispatch processed yet</p>
                             </div>
@@ -102,11 +142,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div class="bg-blue-50 rounded-xl p-4">
                             <div class="font-semibold text-blue-800 mb-1">📦 FEFO Rule</div>
-                            <p class="text-blue-700 text-xs leading-relaxed">First Expiring, First Out — batches with the earliest expiry dates are selected first for dispatch, minimizing waste.</p>
+                            <p class="text-blue-700 text-xs leading-relaxed">First Expiring, First Out — batches with
+                                the earliest expiry dates are selected first for dispatch, minimizing waste.</p>
                         </div>
                         <div class="bg-amber-50 rounded-xl p-4">
                             <div class="font-semibold text-amber-800 mb-1">⏱ MRSL Rule</div>
-                            <p class="text-amber-700 text-xs leading-relaxed">Minimum Remaining Shelf Life — a batch must have ≥ 20% shelf life AND ≥ 30 days (configurable) to expiry to be approved for dispatch.</p>
+                            <p class="text-amber-700 text-xs leading-relaxed">Minimum Remaining Shelf Life — a batch
+                                must have ≥ 20% shelf life AND ≥ 30 days (configurable) to expiry to be approved for
+                                dispatch.</p>
                         </div>
                     </div>
                 </div>
@@ -116,9 +159,11 @@
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                         <div>
                             <h3 class="font-semibold text-slate-900 text-sm">All Dispatch Orders</h3>
-                            <p class="text-xs text-slate-400 mt-0.5">Historical record of FEFO dispatch validations · real-time Firestore</p>
+                            <p class="text-xs text-slate-400 mt-0.5">Historical record of FEFO dispatch validations ·
+                                real-time Firestore</p>
                         </div>
-                        <div class="text-xs font-semibold text-slate-400 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200" id="orders-count">Loading…</div>
+                        <div class="text-xs font-semibold text-slate-400 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200"
+                            id="orders-count">Loading…</div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="data-table">
@@ -173,12 +218,13 @@
             messagingSenderId: "593009113366",
             appId: "1:593009113366:web:b63dd7eb8d0ebeb3aaf837"
         };
-        const app  = initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db   = getFirestore(app);
+        const db = getFirestore(app);
 
         let currentUser = null;
-        let allBatches  = [];
+        let allPendingDocs = [];
+        let allBatches = [];
 
         // ── Auth guard ──
         onAuthStateChanged(auth, async (user) => {
@@ -188,7 +234,7 @@
             if (!sessionStorage.getItem('user_uid')) {
                 const snap = await getDoc(doc(db, 'users', user.uid));
                 const data = snap.exists() ? snap.data() : {};
-                sessionStorage.setItem('user_uid',  user.uid);
+                sessionStorage.setItem('user_uid', user.uid);
                 sessionStorage.setItem('user_name', data.displayName || user.email.split('@')[0]);
                 sessionStorage.setItem('user_role', data.role || 'Warehouse Staff');
             }
@@ -209,7 +255,7 @@
             }
 
             document.getElementById('sidebar-slot').innerHTML = buildSidebar('dispatch');
-            document.getElementById('header-slot').innerHTML  = buildHeader('FEFO Dispatch', 'Process dispatch orders with FEFO + MRSL validation · PB4');
+            document.getElementById('header-slot').innerHTML = buildHeader('FEFO Dispatch', 'Process dispatch orders with FEFO + MRSL validation · PB4');
             startClock();
 
             // Real-time batch listener
@@ -219,30 +265,16 @@
             });
 
             // PB4: Real-time listener for pending retailer requests
-            const reqQ = query(collection(db, 'retailer_requests'), where('status', '==', 'pending'));
+            const reqQ = query(collection(db, 'retailer_requests'));
             onSnapshot(reqQ, (snap) => {
-                const list = document.getElementById('pending-orders-list');
-                if (snap.empty) {
-                    list.innerHTML = `<div class="text-sm text-slate-400 text-center py-8">No pending orders found.</div>`;
-                    return;
-                }
-                list.innerHTML = snap.docs.map(d => {
-                    const data = d.data();
-                    const safeRetName  = _escHtml(data.retailerName || '');
-                    const safeProdName = _escHtml(data.productName || '');
-                    return `
-                        <div onclick="selectRequest('${d.id}', this)" 
-                             data-retailer="${safeRetName}" data-product="${safeProdName}" data-qty="${data.quantityRequested || 0}" data-location="${data.preferredLocation || 'Colombo-01'}"
-                             class="p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all focus:outline-blue-500" tabindex="0">
-                            <div class="text-sm font-semibold text-slate-800 truncate" title="${safeRetName}">${safeRetName}</div>
-                            <div class="flex justify-between items-center mt-1">
-                                <div class="text-xs text-slate-600 truncate mr-2" title="${safeProdName}">${safeProdName}</div>
-                                <div class="text-[11px] mono font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap">Qty: ${data.quantityRequested}</div>
-                            </div>
-                            <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1">📍 ${data.preferredLocation || 'Colombo-01'}</div>
-                        </div>
-                    `;
-                }).join('');
+                const pendingDocs = snap.docs.filter(d => {
+                    const status = (d.data().status || '').toLowerCase();
+                    return status === 'pending';
+                });
+                
+                allPendingDocs = pendingDocs;
+                updateFilterDropdown();
+                renderPendingOrders();
             }, (err) => {
                 document.getElementById('pending-orders-list').innerHTML = `<div class="text-sm text-red-500 text-center py-4">Error: ${err.message}</div>`;
             });
@@ -256,6 +288,64 @@
             window.location.href = 'index.html';
         };
 
+        window.toggleFilter = function() {
+            const form = document.getElementById('pending-filter-form');
+            form.classList.toggle('hidden');
+        };
+
+        window.applyPendingFilter = function() {
+            renderPendingOrders();
+        };
+
+        function updateFilterDropdown() {
+            const select = document.getElementById('filter-product');
+            const currentVal = select.value;
+            const products = [...new Set(allPendingDocs.map(d => (d.data().productName || '').trim()).filter(p => p))].sort();
+            
+            select.innerHTML = '<option value="">All Products</option>' + products.map(p => 
+                `<option value="${_escHtml(p)}" ${p === currentVal ? 'selected' : ''}>${_escHtml(p)}</option>`
+            ).join('');
+        }
+
+        function renderPendingOrders() {
+            const list = document.getElementById('pending-orders-list');
+            const filterProduct = document.getElementById('filter-product').value;
+            const filterQty = parseInt(document.getElementById('filter-qty').value) || 0;
+
+            const filteredDocs = allPendingDocs.filter(d => {
+                const data = d.data();
+                const pname = (data.productName || '');
+                const qty = data.quantityRequested || 0;
+                
+                if (filterProduct && pname !== filterProduct) return false;
+                if (filterQty > 0 && qty < filterQty) return false;
+                return true;
+            });
+
+            if (filteredDocs.length === 0) {
+                list.innerHTML = `<div class="text-sm text-slate-400 text-center py-8">No matching pending orders.</div>`;
+                return;
+            }
+
+            list.innerHTML = filteredDocs.map(d => {
+                const data = d.data();
+                const safeRetName  = _escHtml(data.retailerName || '');
+                const safeProdName = _escHtml(data.productName || '');
+                return `
+                    <div onclick="selectRequest('${d.id}', this)" 
+                         data-retailer="${safeRetName}" data-product="${safeProdName}" data-qty="${data.quantityRequested || 0}" data-location="${data.preferredLocation || 'Colombo-01'}"
+                         class="p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all focus:outline-blue-500" tabindex="0">
+                        <div class="text-sm font-semibold text-slate-800 truncate" title="${safeRetName}">${safeRetName}</div>
+                        <div class="flex justify-between items-center mt-1">
+                            <div class="text-xs text-slate-600 truncate mr-2" title="${safeProdName}">${safeProdName}</div>
+                            <div class="text-[11px] mono font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap">Qty: ${data.quantityRequested}</div>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-1">📍 ${data.preferredLocation || 'Colombo-01'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         let activeRequestId = null;
 
         // HTML-escape utility to prevent XSS in data attributes
@@ -265,13 +355,13 @@
             return d.innerHTML;
         }
 
-        window.selectRequest = function(id, el) {
+        window.selectRequest = function (id, el) {
             activeRequestId = id;
             const retailer = el.dataset.retailer;
-            const product  = el.dataset.product;
-            const qty      = el.dataset.qty;
+            const product = el.dataset.product;
+            const qty = el.dataset.qty;
             const location = el.dataset.location;
-            
+
             const rInput = document.getElementById('dispatch-retailer');
             const pInput = document.getElementById('dispatch-product');
             const qInput = document.getElementById('dispatch-qty');
@@ -293,12 +383,12 @@
         // ════════════════════════════════════════
         // PB4: Process FEFO Dispatch
         // ════════════════════════════════════════
-        window.processDispatch = async function() {
-            const retailer  = document.getElementById('dispatch-retailer').value.trim();
-            const product   = document.getElementById('dispatch-product').value.trim();
+        window.processDispatch = async function () {
+            const retailer = document.getElementById('dispatch-retailer').value.trim();
+            const product = document.getElementById('dispatch-product').value.trim();
             const qtyNeeded = parseInt(document.getElementById('dispatch-qty').value);
-            const location  = document.getElementById('dispatch-location').value.trim();
-            const mrslDays  = parseInt(document.getElementById('dispatch-mrsl-days').value) || 30;
+            const location = document.getElementById('dispatch-location').value.trim();
+            const mrslDays = parseInt(document.getElementById('dispatch-mrsl-days').value) || 30;
 
             if (!retailer || !product || !qtyNeeded || qtyNeeded < 1 || !location) {
                 toast('Please fill all dispatch fields correctly.', 'error');
@@ -336,7 +426,7 @@
             // PB4: Evaluate each batch in FEFO order against MRSL rules
             for (const batch of productBatches) {
                 if (remaining <= 0) break;
-                const ms  = mrslStatus(batch, mrslDays);
+                const ms = mrslStatus(batch, mrslDays);
                 const pct = shelfLifePct(batch.manufacturingDate, batch.expiryDate);
 
                 if (!ms.ok) {
@@ -356,26 +446,26 @@
             }
 
             const fulfilled = qtyNeeded - remaining;
-            const status    = remaining <= 0 ? 'APPROVED' : (fulfilled > 0 ? 'PARTIAL' : 'REJECTED');
+            const status = remaining <= 0 ? 'APPROVED' : (fulfilled > 0 ? 'PARTIAL' : 'REJECTED');
 
             // Save dispatch order to Firestore
             try {
                 await addDoc(collection(db, 'dispatch_orders'), {
                     retailer,
-                    productName:       product,
-                    quantityRequired:  qtyNeeded,
+                    productName: product,
+                    quantityRequired: qtyNeeded,
                     quantityFulfilled: fulfilled,
                     mrslThresholdDays: mrslDays,
                     status,
                     batchesUsed: approved.map(a => ({
-                        batchNumber:   a.batch.batchNumber,
-                        quantity:      a.take,
-                        expiryDate:    a.batch.expiryDate,
-                        shelfLifePct:  a.pct
+                        batchNumber: a.batch.batchNumber,
+                        quantity: a.take,
+                        expiryDate: a.batch.expiryDate,
+                        shelfLifePct: a.pct
                     })),
                     rejectedBatches: rejected.map(r => ({
                         batchNumber: r.batch.batchNumber,
-                        reason:      r.reason
+                        reason: r.reason
                     })),
                     processedAt: serverTimestamp(),
                     processedBy: currentUser?.uid || 'demo'
@@ -399,7 +489,7 @@
                             status: 'Completed'
                         });
                         activeRequestId = null;
-                        
+
                         // Optional UX enhance: Unlock inputs once completed
                         const rInput = document.getElementById('dispatch-retailer');
                         const pInput = document.getElementById('dispatch-product');
@@ -421,7 +511,7 @@
 
             // ── Render result ──
             const statusColors = { APPROVED: 'green', PARTIAL: 'yellow', REJECTED: 'red' };
-            const statusIcons  = { APPROVED: '✅',    PARTIAL: '⚠️',     REJECTED: '❌' };
+            const statusIcons = { APPROVED: '✅', PARTIAL: '⚠️', REJECTED: '❌' };
 
             let html = `
                 <div class="mb-4 flex items-center justify-between">
@@ -495,17 +585,17 @@
                 }
                 tbody.innerHTML = snap.docs.map(d => {
                     const o = d.data();
-                    const statusColors = { APPROVED:'green', PARTIAL:'yellow', REJECTED:'red' };
+                    const statusColors = { APPROVED: 'green', PARTIAL: 'yellow', REJECTED: 'red' };
                     const batches = (o.batchesUsed || []).map(b => b.batchNumber).join(', ') || '—';
                     const ts = o.processedAt ? fmtDate(o.processedAt) : '—';
                     return `<tr>
-                        <td><span class="mono text-xs text-slate-500">${d.id.slice(0,8)}…</span></td>
+                        <td><span class="mono text-xs text-slate-500">${d.id.slice(0, 8)}…</span></td>
                         <td class="text-sm">${o.retailer}</td>
                         <td class="text-sm">${o.productName}</td>
-                        <td class="mono text-xs">${(o.quantityRequired||0).toLocaleString()}</td>
-                        <td class="mono text-xs">${(o.quantityFulfilled||0).toLocaleString()}</td>
+                        <td class="mono text-xs">${(o.quantityRequired || 0).toLocaleString()}</td>
+                        <td class="mono text-xs">${(o.quantityFulfilled || 0).toLocaleString()}</td>
                         <td class="mono text-xs text-slate-500" title="${batches}">
-                            ${batches.length > 35 ? batches.slice(0,35)+'…' : batches}
+                            ${batches.length > 35 ? batches.slice(0, 35) + '…' : batches}
                         </td>
                         <td>${badgeHtml(o.status, statusColors[o.status] || 'gray')}</td>
                         <td class="text-xs text-slate-400">${ts}</td>
@@ -517,4 +607,5 @@
         }
     </script>
 </body>
+
 </html>
