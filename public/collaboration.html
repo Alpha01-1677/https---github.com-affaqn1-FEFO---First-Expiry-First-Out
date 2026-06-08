@@ -310,6 +310,8 @@
         };
 
         // Data Fetching
+        let campaignsData = {};
+
         onAuthStateChanged(auth, user => {
             if (!user) { window.location.href = 'index.html'; return; }
 
@@ -335,6 +337,7 @@
                     snap.forEach(d => {
                         const offer = d.data();
                         const offerId = d.id;
+                        campaignsData[offerId] = offer;
 
                         const quantity = offer.quantityAvailable || 0;
                         const soldUnits = offer.soldUnits || 0;
@@ -362,7 +365,10 @@
                         card.innerHTML = `
                                 <div class="flex justify-between items-start mb-3">
                                     ${statusBadge}
-                                    <span class="text-xs font-bold text-slate-400 font-mono">${offer.batchNumber || 'N/A'}</span>
+                                    <div class="text-right">
+                                        <div class="text-[13px] font-bold text-slate-700">${offer.productName || 'Unknown Product'}</div>
+                                        <div class="text-[10px] font-bold text-slate-400 font-mono mt-0.5">Batch: ${offer.batchNumber || 'N/A'}</div>
+                                    </div>
                                 </div>
                                 <h3 class="font-bold text-slate-800 text-lg">${offer.promotionTitle || 'Promotion'}</h3>
                                 <div class="text-sm font-medium text-emerald-600 mb-4">${offer.discountPercent}% Off</div>
@@ -495,8 +501,17 @@
         };
 
         window.openSalesModal = function (id) {
+            const campaign = campaignsData[id];
+            if (!campaign) return;
+            const quantity = campaign.quantityAvailable || 0;
+            const soldUnits = campaign.soldUnits || 0;
+            const remaining = Math.max(0, quantity - soldUnits);
+
             document.getElementById('modal-promo-id').value = id;
             document.getElementById('units-sold-input').value = '';
+            document.getElementById('units-sold-input').max = remaining;
+            document.getElementById('units-sold-input').placeholder = `e.g. Max ${remaining}`;
+            
             const modal = document.getElementById('update-sales-modal');
             modal.classList.remove('hidden');
             setTimeout(() => {
@@ -522,14 +537,36 @@
                 return;
             }
 
+            const campaign = campaignsData[id];
+            if (!campaign) {
+                alert("Campaign not found.");
+                return;
+            }
+
+            const quantity = campaign.quantityAvailable || 0;
+            const currentSold = campaign.soldUnits || 0;
+            const remaining = quantity - currentSold;
+
+            if (addedUnits > remaining) {
+                alert(`Cannot exceed the promotional target quantity. You can only update up to ${remaining} units.`);
+                return;
+            }
+
             const btn = document.getElementById('btn-submit-sales');
             btn.disabled = true;
             btn.textContent = "Updating...";
 
             try {
-                await updateDoc(doc(db, 'live_campaigns', id), {
+                const newSoldUnits = currentSold + addedUnits;
+                const updates = {
                     soldUnits: increment(addedUnits)
-                });
+                };
+
+                if (newSoldUnits >= quantity) {
+                    updates.status = 'ended';
+                }
+
+                await updateDoc(doc(db, 'live_campaigns', id), updates);
                 closeSalesModal();
                 if (typeof toast === 'function') toast('Sales updated successfully!', 'success');
             } catch (e) {

@@ -5,36 +5,47 @@ const { test, expect } = require('@playwright/test');
 // Uses waitForURL with a generous timeout to handle Firebase auth latency.
 // ──────────────────────────────────────────────────────────────────────────────
 async function uiLogin(page, email, password, role) {
-  await page.goto('/index.html');
+  await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
 
-  // Use robust IDs for tab selection
+  // Select the correct tab FIRST — this must happen before filling credentials
+  // because the app validates the tab/role combination on submit.
   if (role === 'Warehouse Staff') {
     await page.click('#tab-staff');
   } else {
     await page.click('#tab-supervisor');
   }
 
+  // Always fill credentials manually — demo buttons may switch tabs as a side
+  // effect of their auto-fill logic, causing "wrong tab" auth errors.
   await page.fill('#login-email', email);
   await page.fill('#login-password', password);
+
   await page.click('#login-btn');
 
-  // Optional: check for immediate error message
-  const errorEl = page.locator('#login-error');
-  
-  // Wait for navigation away from index (Firebase auth may take a few seconds)
-  // Increased timeout to 30s to handle environment latency
-  try {
-    await page.waitForURL(/dashboard\.html|retailer_portal\.html|sales_manager_portal\.html|batches\.html/, {
-      timeout: 30000,
-    });
-  } catch (e) {
-    // If we timeout, check if there's a visible error message on the page
-    if (await errorEl.isVisible()) {
-      const msg = await page.locator('#login-error-msg').innerText();
+  // Race: wait for a successful redirect OR a real login error message
+  const TIMEOUT = 45_000;
+  await Promise.race([
+    page.waitForURL(
+      /dashboard\.html|retailer_portal\.html|sales_manager_portal\.html|batches\.html/,
+      { timeout: TIMEOUT, waitUntil: 'domcontentloaded' }
+    ),
+    // Only trigger on a genuine error: #login-error-msg must have non-empty text.
+    // Checking :visible alone gives a false positive because the same element
+    // is briefly shown as a loading spinner during normal Firebase auth.
+    page.waitForFunction(
+      () => {
+        const msg = document.querySelector('#login-error-msg');
+        return msg && msg.textContent.trim().length > 0;
+      },
+      { timeout: TIMEOUT }
+    ).then(async () => {
+      const msg = await page
+        .locator('#login-error-msg')
+        .innerText()
+        .catch(() => 'Unknown error');
       throw new Error(`Login failed for ${email}: ${msg}`);
-    }
-    throw e;
-  }
+    }),
+  ]);
 }
 
 
@@ -43,10 +54,14 @@ async function uiLogin(page, email, password, role) {
 // ──────────────────────────────────────────────────────────────────────────────
 test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)', () => {
 
+  // Set 60 s timeout for every test in this suite — Firebase auth + redirect can be slow.
+  // test.setTimeout() inside beforeEach is silently ignored; use describe.configure instead.
+  test.describe.configure({ mode: 'serial', timeout: 60_000 });
+
   // ─── PB5: Dashboard Data Accuracy & Warehouse Filtering ───────────────────
   test('PB5: Dashboard Data Accuracy & Warehouse Filtering', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard.html', { waitUntil: 'domcontentloaded' });
 
     // Verify the main inventory table is visible (use unique ID to avoid strict-mode violation)
     await expect(page.locator('#dashboard-batch-tbody')).toBeVisible({ timeout: 10000 });
@@ -67,7 +82,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
   // ─── PB6: Aging Bucket Classification & Highlighting ──────────────────────
   test('PB6: Aging Bucket Classification & Highlighting', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard.html', { waitUntil: 'domcontentloaded' });
 
     const bucketGrid = page.locator('#aging-buckets-grid');
     await expect(bucketGrid).toBeVisible({ timeout: 10000 });
@@ -86,7 +101,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
   // ─── PB7: Automated Shelf-Life Alerts ─────────────────────────────────────
   test('PB7: Automated Shelf-Life Alerts', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard.html', { waitUntil: 'domcontentloaded' });
 
     // Expand the critical panel
     await page.click('#critical-toggle-btn');
@@ -100,7 +115,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
   // ─── PB9: Retailer Portal Secure Access (RBAC) ────────────────────────────
   test('PB9: Retailer Portal Secure Access', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Verify Retailer Portal landmarks
     await expect(page.locator('h1:has-text("Retailer Portal")')).toBeVisible({ timeout: 10000 });
@@ -110,7 +125,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
     // RBAC: Retailer must be blocked from Sales Manager portal
     // The portal reads sessionStorage role before Firebase resolves,
     // so the in-page script redirects immediately.
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
     
     // Use a more flexible wait that accounts for the redirect to retailer_portal
     await page.waitForURL(url => {
@@ -124,7 +139,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
   // ─── PB10: Standardized Promotion Management ──────────────────────────────
   test('PB10: Standardized Promotion Management', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Structural checks
     await expect(page.locator('text=Financial Review Queue')).toBeVisible({ timeout: 10000 });
@@ -182,7 +197,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
   // ─── PB11: B2B Collaboration – Retailer Live Campaigns ────────────────────
   test('PB11: B2B Collaboration Velocity Tracking', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Navigate to the Live Campaigns tab
     await page.click('#nav-live');
@@ -212,7 +227,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
   // ─── PB12: End Campaign – Sales Manager terminates a live promotion ────────
   test('PB12: End Campaign – Sales Manager Can Terminate Promotions', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Wait for Live Promotions Monitor to load
     await expect(page.locator('text=Live Promotions Monitor')).toBeVisible({ timeout: 10000 });
@@ -250,7 +265,7 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
   // ─── PB11-CustomQuantity: Retailer Can Accept Partial Quantity ────────────
   test('PB11-CustomQuantity: Retailer Can Accept Partial Quantity', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Find the first offer card
     const offerCard = page.locator('#offers-container .bg-white').first();

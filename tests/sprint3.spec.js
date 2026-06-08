@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 // Helper: UI Login (mirrors the proven pattern from sprint2_automation.spec.js)
 // ─────────────────────────────────────────────────────────────────────────────
 async function uiLogin(page, email, password, role) {
-  await page.goto('/index.html');
+  await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
 
   if (role === 'Warehouse Staff') {
     await page.click('#tab-staff');
@@ -21,7 +21,7 @@ async function uiLogin(page, email, password, role) {
   try {
     await page.waitForURL(
       /dashboard\.html|retailer_portal\.html|sales_manager_portal\.html|batches\.html/,
-      { timeout: 30000 }
+      { timeout: 45000, waitUntil: 'domcontentloaded' }
     );
   } catch (e) {
     if (await errorEl.isVisible()) {
@@ -36,13 +36,13 @@ async function uiLogin(page, email, password, role) {
 // Sprint 3 Test Suite: PB12 · PB13 · PB14 · PB15
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
-  test.setTimeout(90000); // Account for Firebase login and data fetching delays
+  test.describe.configure({ mode: 'serial', timeout: 90_000 });
 
 
   // ─── TC-01: PB12 – Intelligent Retailer Dropdown ──────────────────────────
   test('TC-01 [PB12]: Retailer dropdown shows "Recommended (Top Performers)" group', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Wait for the page to fully render
     await expect(page.locator('text=Live Promotions Monitor')).toBeVisible({ timeout: 15000 });
@@ -80,7 +80,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
 
     // Navigate directly to the ROI dashboard
-    await page.goto('/financial_roi.html');
+    await page.goto('/financial_roi.html', { waitUntil: 'domcontentloaded' });
 
     // Confirm the page loads with a heading
     const heading = page.locator('h1, h2').filter({ hasText: /ROI|Financial|Product Rescue/i }).first();
@@ -102,7 +102,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-03: PB14 – Predictive Velocity Warnings ───────────────────────────
   test('TC-03 [PB14]: Dashboard displays Early Warnings section for at-risk batches', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard.html', { waitUntil: 'domcontentloaded' });
 
     // Dashboard must load the main batch table
     await expect(page.locator('#dashboard-batch-tbody')).toBeVisible({ timeout: 15000 });
@@ -126,7 +126,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-04: PB15 – Smart Feed Sorting ────────────────────────────────────
   test('TC-04 [PB15]: Smart Procurement Feed renders and shows personalized header', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     // The new PB15 header must be visible
     await expect(
@@ -159,7 +159,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-05: PB15 – Top Match UI Badge ────────────────────────────────────
   test('TC-05 [PB15]: Top Match badge is shown on highest-affinity promotion', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     const offersContainer = page.locator('#offers-container');
     const noOffersMsg = page.locator('#no-offers-msg');
@@ -201,7 +201,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-06: PB15 – Smart Claim Quantity Suggestion ───────────────────────
   test('TC-06 [PB15]: Accept modal shows Smart Suggestion for optimal claim quantity', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     const offersContainer = page.locator('#offers-container');
     const noOffersMsg = page.locator('#no-offers-msg');
@@ -258,7 +258,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-PB14-A: Velocity Algorithm – Modal auto-fills title & discount ────
   test('TC-PB14-A [PB14]: Trigger Promo modal auto-fills promotion title and discount via velocity algorithm', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Wait for the escalated batches table to load
     await expect(page.locator('#escalated-tbody')).toBeVisible({ timeout: 15000 });
@@ -304,7 +304,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-PB14-B: Velocity Algorithm – Three-Tier discount correctness ───────
   test('TC-PB14-B [PB14]: Auto-filled discount matches one of the three velocity tiers (10/25/40)', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('#escalated-tbody')).toBeVisible({ timeout: 15000 });
 
@@ -354,7 +354,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-PB14-C: Velocity Algorithm – AI hints render correctly ─────────────
   test('TC-PB14-C [PB14]: AI Recommended hints appear after batch selection and are labelled correctly', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('#escalated-tbody')).toBeVisible({ timeout: 15000 });
 
@@ -398,7 +398,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-07: Logout Functionality ──────────────────────────────────────────
   test('TC-07: Logout button correctly signs out and redirects to login', async ({ page }) => {
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/sales_manager_portal.html');
+    await page.goto('/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
     // Wait for sidebar to load and sign out button to be present
     const logoutBtn = page.locator('button[title="Sign Out"]');
@@ -408,7 +408,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
     await logoutBtn.click();
 
     // Verify redirection to index.html
-    await page.waitForURL(/\/index\.html/, { timeout: 15000 });
+    await page.waitForURL(/\/index\.html/, { timeout: 15000, waitUntil: 'domcontentloaded' });
 
     // Verify session is cleared (login form is visible)
     await expect(page.locator('#login-btn')).toBeVisible();
@@ -419,7 +419,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-08: Promotion Analytics Tracking – Decline Reason ────────────────
   test('TC-08 [Promotion Analytics]: Retailer can decline an offer and provide a reason', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     const offersContainer = page.locator('#offers-container');
     const noOffersMsg = page.locator('#no-offers-msg');
@@ -473,7 +473,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   // ─── TC-09: Promotion Analytics Tracking – Accept Flow ──────────────────
   test('TC-09 [Promotion Analytics]: Retailer can accept an offer and see success confirmation', async ({ page }) => {
     await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
-    await page.goto('/retailer_portal.html');
+    await page.goto('/retailer_portal.html', { waitUntil: 'domcontentloaded' });
 
     const offersContainer = page.locator('#offers-container');
     const noOffersMsg = page.locator('#no-offers-msg');
@@ -520,7 +520,7 @@ test.describe('Sprint 3: Manual Test Cases (PB12 – PB15)', () => {
   test('TC-10 [Promotion Analytics]: Analyst Dashboard renders charts and KPI cards', async ({ page }) => {
     // Analytics is typically for Sales Managers/Planners
     await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
-    await page.goto('/analyst_dashboard.html');
+    await page.goto('/analyst_dashboard.html', { waitUntil: 'domcontentloaded' });
 
     // Confirm heading
     await expect(page.locator('h1:has-text("Promotion Analytics")')).toBeVisible({ timeout: 15000 });

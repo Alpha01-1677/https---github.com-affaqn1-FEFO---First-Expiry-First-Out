@@ -2,9 +2,11 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Sprint 2: Manual Test Cases - Dashboard & Features (PB5-PB8)', () => {
 
+    test.describe.configure({ mode: 'serial', timeout: 60_000 });
+
     test.beforeEach(async ({ page }) => {
         await test.step('Log in as Demand Planner and Navigate to Dashboard', async () => {
-            await page.goto('http://127.0.0.1:8080/index.html');
+            await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
 
             // Ensure Management Portal tab is explicitly active
             await page.click('#tab-supervisor');
@@ -15,8 +17,18 @@ test.describe('Sprint 2: Manual Test Cases - Dashboard & Features (PB5-PB8)', ()
 
             await page.click('#login-btn');
 
-            // Wait for redirect to dashboard using a web-first assertion (increased timeout for parallel overhead)
-            await expect(page).toHaveURL(/.*dashboard\.html/, { timeout: 20000 });
+            // Race: wait for successful redirect to dashboard OR a real login error message
+            const TIMEOUT = 45_000;
+            await Promise.race([
+                page.waitForURL(/.*dashboard\.html/, { timeout: TIMEOUT, waitUntil: 'domcontentloaded' }),
+                page.waitForFunction(() => {
+                    const msg = document.querySelector('#login-error-msg');
+                    return msg && msg.textContent.trim().length > 0;
+                }, { timeout: TIMEOUT }).then(async () => {
+                    const msg = await page.locator('#login-error-msg').innerText().catch(() => 'Unknown error');
+                    throw new Error(`Login failed for planner@nestle.com: ${msg}`);
+                })
+            ]);
         });
     });
 

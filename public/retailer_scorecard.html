@@ -310,6 +310,7 @@
             allCampaigns.forEach(c => {
                 // Filter
                 if (filterProd !== 'all' && c.productName !== filterProd) return;
+                if (c.retailerID === 'ALL') return; // Skip broadcast campaigns
                 
                 // Active/Reserved campaigns only? Usually we include ended ones to measure overall success too.
                 // We'll include all campaigns so the score is historically accurate
@@ -318,7 +319,7 @@
                     retailerStats[c.retailerID] = { sold: 0, total: 0 };
                 }
                 retailerStats[c.retailerID].sold += (c.soldUnits || 0);
-                retailerStats[c.retailerID].total += (c.quantityAvailable || 0);
+                retailerStats[c.retailerID].total += ((c.quantityAvailable || 0) + (c.soldUnits || 0));
             });
 
             const leaderboard = [];

@@ -2,9 +2,11 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Sprint 2: Manual Test Cases - User Authentication (PB1)', () => {
 
+    test.describe.configure({ mode: 'serial', timeout: 60_000 });
+
     test.beforeEach(async ({ page }) => {
         await test.step('Navigate to login page', async () => {
-            await page.goto('http://127.0.0.1:8080/index.html');
+            await page.goto('http://127.0.0.1:8080/index.html', { waitUntil: 'domcontentloaded' });
         });
     });
 
@@ -31,7 +33,7 @@ test.describe('Sprint 2: Manual Test Cases - User Authentication (PB1)', () => {
         });
 
         await test.step('Step 5: Verify Redirection to dashboard', async () => {
-            await page.waitForURL('**/dashboard.html', { timeout: 10000 });
+            await page.waitForURL('**/dashboard.html', { timeout: 15000, waitUntil: 'domcontentloaded' });
         });
     });
 
@@ -71,7 +73,7 @@ test.describe('Sprint 2: Manual Test Cases - User Authentication (PB1)', () => {
         });
 
         await test.step('Step 5: Verify Redirection to Batches page for staff', async () => {
-            await page.waitForURL('**/batches.html', { timeout: 10000 });
+            await page.waitForURL('**/batches.html', { timeout: 15000, waitUntil: 'domcontentloaded' });
         });
     });
 });
@@ -80,7 +82,7 @@ test.describe('Sprint 2: Manual Test Cases - User Authentication (PB1)', () => {
 // Helper: UI Login via the real login form
 // ──────────────────────────────────────────────────────────────────────────────
 async function uiLogin(page, email, password, role) {
-    await page.goto('http://127.0.0.1:8080/index.html');
+    await page.goto('http://127.0.0.1:8080/index.html', { waitUntil: 'domcontentloaded' });
 
     if (role === 'Warehouse Staff') {
         await page.click('#tab-staff');
@@ -94,7 +96,8 @@ async function uiLogin(page, email, password, role) {
 
     try {
         await page.waitForURL(/dashboard\.html|retailer_portal\.html|sales_manager_portal\.html|batches\.html/, {
-            timeout: 30000,
+            timeout: 45000,
+            waitUntil: 'domcontentloaded',
         });
     } catch (e) {
         const errorEl = page.locator('#login-error');
@@ -111,13 +114,15 @@ async function uiLogin(page, email, password, role) {
 // ══════════════════════════════════════════════════════════════════════════════
 test.describe('Sprint 2: PB9 — Standardized Promotion Management', () => {
 
+    test.describe.configure({ mode: 'serial', timeout: 60_000 });
+
     test('TC-PB9-001: Sales Manager can view escalated batches queue and trigger a promotion', async ({ page }) => {
         await test.step('Step 1: Log in as Sales Manager', async () => {
             await uiLogin(page, 'planner@nestle.com', 'nestle123', 'Sales Manager');
         });
 
         await test.step('Step 2: Navigate to Sales Manager Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html');
+            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Verify the escalated batches queue is visible', async () => {
@@ -182,7 +187,7 @@ test.describe('Sprint 2: PB9 — Standardized Promotion Management', () => {
         });
 
         await test.step('Step 2: Navigate to Retailer Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/retailer_portal.html');
+            await page.goto('http://127.0.0.1:8080/retailer_portal.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Verify Retailer Portal loads with Smart Procurement Feed', async () => {
@@ -192,13 +197,13 @@ test.describe('Sprint 2: PB9 — Standardized Promotion Management', () => {
 
         await test.step('Step 4: Verify promotions are visible or empty state is shown', async () => {
             const offersContainer = page.locator('#offers-container');
-            const noOffersMsg = page.locator('#no-offers-msg');
+            const noOffersMsg = page.locator('#no-offers-msg:visible');
+            const firstOffer = offersContainer.locator('.bg-white:visible').first();
 
-            // Wait for either offers to load or empty message
-            await page.waitForTimeout(3000);
+            // Web-first race to wait for data loading
+            await expect(noOffersMsg.or(firstOffer)).toBeVisible({ timeout: 15000 });
 
-            const hasOffers = await offersContainer.locator('.bg-white').first().isVisible().catch(() => false);
-            const hasNoOffersMsg = await noOffersMsg.isVisible();
+            const hasOffers = await firstOffer.isVisible();
 
             if (hasOffers) {
                 // Verify offer cards display discount info (read-only rendered text)
@@ -218,11 +223,11 @@ test.describe('Sprint 2: PB9 — Standardized Promotion Management', () => {
         });
 
         await test.step('Step 5: Verify Retailer cannot access Sales Manager Portal (RBAC)', async () => {
-            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html');
+            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
             // Retailer role should be redirected away
             await page.waitForURL(url => {
                 return url.pathname.includes('index.html') || url.pathname.includes('retailer_portal.html');
-            }, { timeout: 15000 });
+            }, { timeout: 15000, waitUntil: 'domcontentloaded' });
 
             const finalUrl = page.url();
             expect(finalUrl).toMatch(/index\.html|retailer_portal\.html/);
@@ -235,13 +240,15 @@ test.describe('Sprint 2: PB9 — Standardized Promotion Management', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
 
+    test.describe.configure({ mode: 'serial', timeout: 60_000 });
+
     test('TC-PB10-001: Retailer can view Live Campaigns tab with sales velocity progress bar', async ({ page }) => {
         await test.step('Step 1: Log in as Retailer', async () => {
             await uiLogin(page, 'retailer1@nestle.com', 'nestle123', 'Retailer');
         });
 
         await test.step('Step 2: Navigate to Retailer Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/retailer_portal.html');
+            await page.goto('http://127.0.0.1:8080/retailer_portal.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Click on "My Active Campaigns" tab', async () => {
@@ -255,11 +262,12 @@ test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
         });
 
         await test.step('Step 5: Verify progress bar or empty state is shown', async () => {
-            const noLiveMsg = page.locator('#no-live-msg');
+            const noLiveMsg = page.locator('#no-live-msg:visible');
             const liveContainer = page.locator('#live-container');
+            const firstLive = liveContainer.locator('.bg-white:visible').first();
 
-            // Wait for data to load
-            await page.waitForTimeout(3000);
+            // Web-first race to wait for data loading
+            await expect(noLiveMsg.or(firstLive)).toBeVisible({ timeout: 15000 });
 
             const hasNoLiveMsg = await noLiveMsg.isVisible();
 
@@ -289,7 +297,7 @@ test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
         });
 
         await test.step('Step 2: Navigate to Collaboration Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/collaboration.html');
+            await page.goto('http://127.0.0.1:8080/collaboration.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Verify Collaboration Portal heading is visible', async () => {
@@ -299,13 +307,13 @@ test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
 
         await test.step('Step 4: Verify campaign cards or empty state are displayed', async () => {
             const campaignsGrid = page.locator('#campaigns-grid');
-            const noDataMsg = page.locator('#no-data-msg');
+            const noDataMsg = page.locator('#no-data-msg:visible');
+            const firstCampaign = campaignsGrid.locator('.campaign-card-selectable:visible').first();
 
-            // Wait for campaigns to load
-            await page.waitForTimeout(3000);
+            // Web-first race to wait for data loading
+            await expect(noDataMsg.or(firstCampaign)).toBeVisible({ timeout: 15000 });
 
-            const hasNoData = await noDataMsg.isVisible();
-            const hasCampaigns = await campaignsGrid.locator('.campaign-card-selectable').first().isVisible().catch(() => false);
+            const hasCampaigns = await firstCampaign.isVisible();
 
             if (hasCampaigns) {
                 // Campaign cards are present — click the first one to open the Collaboration Log
@@ -363,6 +371,8 @@ test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 test.describe('Sprint 2: PB9 (Extended) — Promotion Trigger & Read-Only Enforcement', () => {
 
+    test.describe.configure({ mode: 'serial', timeout: 60_000 });
+
     // ──────────────────────────────────────────────────────────────────────────
     // TC-PB9-003: Promotion form validation — required fields must be filled
     // Covers the negative case: "trying to submit a promotion with missing fields"
@@ -373,7 +383,7 @@ test.describe('Sprint 2: PB9 (Extended) — Promotion Trigger & Read-Only Enforc
         });
 
         await test.step('Step 2: Navigate to Sales Manager Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html');
+            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Wait for the portal to load', async () => {
@@ -426,7 +436,7 @@ test.describe('Sprint 2: PB9 (Extended) — Promotion Trigger & Read-Only Enforc
         });
 
         await test.step('Step 2: Navigate to Sales Manager Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html');
+            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Confirm portal layout — queue and monitor sections are both visible', async () => {
@@ -480,6 +490,8 @@ test.describe('Sprint 2: PB9 (Extended) — Promotion Trigger & Read-Only Enforc
 // ══════════════════════════════════════════════════════════════════════════════
 test.describe('Sprint 2: PB10 (Extended) — Live Campaigns & Collaboration Log', () => {
 
+    test.describe.configure({ mode: 'serial', timeout: 60_000 });
+
     // ──────────────────────────────────────────────────────────────────────────
     // TC-PB10-003: Planner-side collaboration log — verify Planner can view
     //              the collaboration portal and campaign cards
@@ -491,7 +503,7 @@ test.describe('Sprint 2: PB10 (Extended) — Live Campaigns & Collaboration Log'
         });
 
         await test.step('Step 2: Navigate to Collaboration Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/collaboration.html');
+            await page.goto('http://127.0.0.1:8080/collaboration.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Verify the Collaboration Portal heading and description are visible', async () => {
@@ -501,12 +513,13 @@ test.describe('Sprint 2: PB10 (Extended) — Live Campaigns & Collaboration Log'
 
         await test.step('Step 4: Verify the campaigns grid or empty state renders for a Planner', async () => {
             const campaignsGrid = page.locator('#campaigns-grid');
-            const noDataMsg = page.locator('#no-data-msg');
+            const noDataMsg = page.locator('#no-data-msg:visible');
+            const firstCampaign = campaignsGrid.locator('.campaign-card-selectable:visible').first();
 
-            // Wait for Firestore snapshot to arrive
-            await page.waitForTimeout(3000);
+            // Web-first race to wait for data loading
+            await expect(noDataMsg.or(firstCampaign)).toBeVisible({ timeout: 15000 });
 
-            const hasCampaigns = await campaignsGrid.locator('.campaign-card-selectable').first().isVisible().catch(() => false);
+            const hasCampaigns = await firstCampaign.isVisible();
             const hasNoData = await noDataMsg.isVisible();
 
             if (hasCampaigns) {
@@ -561,21 +574,23 @@ test.describe('Sprint 2: PB10 (Extended) — Live Campaigns & Collaboration Log'
         });
 
         await test.step('Step 2: Navigate to Retailer Portal', async () => {
-            await page.goto('http://127.0.0.1:8080/retailer_portal.html');
+            await page.goto('http://127.0.0.1:8080/retailer_portal.html', { waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Step 3: Wait for Smart Procurement Feed to load', async () => {
             await expect(page.locator('#tab-offers')).toBeVisible({ timeout: 15000 });
             await expect(page.locator('text=Smart Procurement Feed')).toBeVisible();
-            // Allow Firestore listener to populate offers
-            await page.waitForTimeout(3000);
         });
 
         await test.step('Step 4: Inspect each offer card — confirm no editable inputs for Title, Discount, or Duration', async () => {
             const offersContainer = page.locator('#offers-container');
-            const noOffersMsg = page.locator('#no-offers-msg');
+            const noOffersMsg = page.locator('#no-offers-msg:visible');
+            const firstOffer = offersContainer.locator('.bg-white:visible').first();
 
-            const hasOffers = await offersContainer.locator('.bg-white').first().isVisible().catch(() => false);
+            // Web-first race to wait for data loading
+            await expect(noOffersMsg.or(firstOffer)).toBeVisible({ timeout: 15000 });
+
+            const hasOffers = await firstOffer.isVisible();
 
             if (hasOffers) {
                 // Get all offer cards
@@ -608,12 +623,12 @@ test.describe('Sprint 2: PB10 (Extended) — Live Campaigns & Collaboration Log'
 
         await test.step('Step 5: Verify Retailer cannot navigate to Sales Manager Portal (RBAC boundary)', async () => {
             // Directly attempt to access Sales Manager Portal as a Retailer
-            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html');
+            await page.goto('http://127.0.0.1:8080/sales_manager_portal.html', { waitUntil: 'domcontentloaded' });
 
             // Retailer should be redirected — cannot access manager-only pages
             await page.waitForURL(url => {
                 return url.pathname.includes('index.html') || url.pathname.includes('retailer_portal.html');
-            }, { timeout: 15000 });
+            }, { timeout: 15000, waitUntil: 'domcontentloaded' });
 
             const finalUrl = page.url();
             expect(finalUrl).toMatch(/index\.html|retailer_portal\.html/);

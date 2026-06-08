@@ -364,6 +364,41 @@
         </div>
     </div>
 
+    <!-- ── Analytics Modal ── -->
+    <div class="ej-modal-overlay" id="analytics-modal-overlay" onclick="closeAnalyticsModal(event)">
+        <div class="ej-modal" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Prediction Analytics</h2>
+                    <p style="font-size:12px;color:#94a3b8;margin-top:4px;">How we determined this recommendation.</p>
+                </div>
+                <button onclick="closeAnalyticsModal()" style="border:none;background:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:20px;line-height:1;">×</button>
+            </div>
+            
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:20px;">
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Category</div>
+                    <div id="analytics-category" style="font-size:14px; font-weight:600; color:#0f172a;"></div>
+                </div>
+                <div style="display:flex; gap:20px; margin-bottom:16px;">
+                    <div style="flex:1;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Match Score</div>
+                        <div id="analytics-score" style="font-size:18px; font-weight:700; color:#8b5cf6;"></div>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Historical Sales Velocity</div>
+                        <div id="analytics-velocity" style="font-size:18px; font-weight:700; color:#059669;"></div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Reasoning</div>
+                    <div id="analytics-reasoning" style="font-size:13px; font-weight:500; color:#334155; line-height:1.5;"></div>
+                </div>
+            </div>
+            <button onclick="closeAnalyticsModal()" style="width:100%;padding:11px;border-radius:12px;border:none;background:#8b5cf6;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(139,92,246,0.25);transition:all 0.2s ease;">Close</button>
+        </div>
+    </div>
+
     <!-- ── Success Modal ── -->
     <div class="ej-modal-overlay" id="success-modal-overlay" onclick="closeSuccessModal(event)">
         <div class="ej-modal" onclick="event.stopPropagation()" style="max-width:320px; text-align:center; padding:40px 24px;">
@@ -404,6 +439,19 @@
 
         let currentOffers = {};
         let currentRenderId = 0;
+
+        const getCategory = (name) => {
+            if (!name) return 'General';
+            const parts = name.trim().split(/\s+/);
+            if (parts[0].toLowerCase() === 'nestle' && parts.length > 1) {
+                let cat = parts[1];
+                if (cat.toLowerCase() === 'fresh' && parts[2]?.toLowerCase() === 'milk') {
+                    return 'Milk';
+                }
+                return cat;
+            }
+            return parts[0] || 'General';
+        };
 
         window.showTab = function(tab) {
             document.getElementById('tab-offers').style.display = tab === 'offers' ? 'block' : 'none';
@@ -452,7 +500,7 @@
                 historySnap.forEach(d => {
                     const data = d.data();
                     const prodName = data.productName || '';
-                    const category = prodName.split(' ')[0] || 'General';
+                    const category = getCategory(prodName);
                     
                     if (!userPreferences[category]) {
                         userPreferences[category] = { claims: 0, totalVelocity: 0, count: 0 };
@@ -502,7 +550,7 @@
                             continue;
                         }
 
-                        const category = (offer.productName || '').split(' ')[0] || 'General';
+                        const category = getCategory(offer.productName);
                         let matchScore = affinity[category] || 0.1;
                         
                         const daysLeft = offer.endDate ? Math.ceil((new Date(offer.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 30;
@@ -535,6 +583,7 @@
                         offer.smartCategory = category;
                         offer.smartQuantity = smartQty;
                         offer.badgeType = badgeType;
+                        offer.analyticsVelocity = avgVelocityForCategory;
 
                         activeOffersMap.set(dedupeKey, { offer, offerId });
                     } else if (offer.status === 'reserved') {
@@ -630,9 +679,14 @@
             const badgeLabel = offer.badgeType || "Top Match";
             
             const badgeHtml = isTopMatch 
-                ? `<div class="mb-3 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-lg flex items-center gap-2">
-                       <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                       <span class="text-[11px] font-bold text-purple-700">${badgeLabel}: Based on past success with ${offer.smartCategory}</span>
+                ? `<div class="mb-3 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-lg flex items-center justify-between gap-2">
+                       <div class="flex items-center gap-2">
+                           <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                           <span class="text-[11px] font-bold text-purple-700">${badgeLabel}: Based on past success with ${offer.smartCategory}</span>
+                       </div>
+                       <button onclick="showAnalyticsModal('${id}')" class="text-purple-400 hover:text-purple-600 transition" title="View Analytics">
+                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                       </button>
                    </div>`
                 : '';
 
@@ -752,7 +806,7 @@
             document.getElementById('decline-promo-id').value = id;
             document.getElementById('decline-product-name').value = offer.productName || '';
             // Derive category from productName (same heuristic as scoring)
-            document.getElementById('decline-category').value = (offer.productName || '').split(' ')[0] || 'General';
+            document.getElementById('decline-category').value = getCategory(offer.productName);
             document.getElementById('decline-display-title').textContent = offer.promotionTitle || offer.productName || 'N/A';
             // Reset state
             document.querySelectorAll('.decline-reason-chip').forEach(c => c.classList.remove('selected'));
@@ -849,6 +903,32 @@
             document.getElementById('success-modal-overlay').classList.remove('open');
         };
 
+        window.showAnalyticsModal = function(id) {
+            const offer = currentOffers[id];
+            if (!offer) return;
+            
+            document.getElementById('analytics-category').textContent = offer.smartCategory || 'N/A';
+            document.getElementById('analytics-score').textContent = Math.round((offer.smartScore || 0) * 100) + '%';
+            document.getElementById('analytics-velocity').textContent = Math.round((offer.analyticsVelocity || 0) * 100) + '% / item';
+            
+            let reasoning = 'This item is recommended based on your past success.';
+            if (offer.badgeType === "High Velocity Match") {
+                reasoning = 'You have a very high historical sales velocity for this category, indicating strong demand in your store.';
+            } else if (offer.badgeType === "Proven Category Success") {
+                reasoning = 'You have previously accepted and successfully sold items in this category.';
+            } else if (offer.badgeType === "Top Match") {
+                reasoning = 'This offer is a strong match due to an impending expiry date paired with your store profile.';
+            }
+            document.getElementById('analytics-reasoning').textContent = reasoning;
+            
+            document.getElementById('analytics-modal-overlay').classList.add('open');
+        };
+
+        window.closeAnalyticsModal = function(evt) {
+            if (evt && evt.target !== document.getElementById('analytics-modal-overlay')) return;
+            document.getElementById('analytics-modal-overlay').classList.remove('open');
+        };
+
         window.openAcceptModal = function(id) {
             const offer = currentOffers[id];
             if (!offer) return;
@@ -864,7 +944,13 @@
             
             qtyInput.value = suggestedQty;
             qtyInput.max = maxQty;
-            document.getElementById('max-qty-label').innerHTML = `of ${maxQty.toLocaleString()} available<br><span style="color:#8b5cf6;font-size:10px;font-weight:700;">★ Smart Suggestion: ${suggestedQty.toLocaleString()} units</span>`;
+            document.getElementById('max-qty-label').innerHTML = `of ${maxQty.toLocaleString()} available<br>
+                <div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
+                    <span style="color:#8b5cf6;font-size:10px;font-weight:700;">★ Smart Suggestion: ${suggestedQty.toLocaleString()} units</span>
+                    <button type="button" onclick="showAnalyticsModal('${id}')" style="background:none;border:none;cursor:pointer;color:#8b5cf6;padding:0;display:flex;" title="View Analytics">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </button>
+                </div>`;
             
             document.getElementById('accept-modal-overlay').classList.add('open');
         };
@@ -923,7 +1009,7 @@
                         promotionID: id,
                         retailerID: auth.currentUser?.uid || '',
                         productName: offer.productName || '',
-                        category: (offer.productName || '').split(' ')[0] || 'General',
+                        category: getCategory(offer.productName),
                         promotionTitle: offer.promotionTitle || '',
                         discountPercent: offer.discountPercent || 0,
                         action: 'accepted',
@@ -982,7 +1068,7 @@
                         promotionID: id,
                         retailerID: auth.currentUser?.uid || '',
                         productName: offer.productName || '',
-                        category: (offer.productName || '').split(' ')[0] || 'General',
+                        category: getCategory(offer.productName),
                         promotionTitle: offer.promotionTitle || '',
                         discountPercent: offer.discountPercent || 0,
                         action: 'accepted',
