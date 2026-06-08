@@ -250,7 +250,7 @@ test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
         });
 
         await test.step('Step 4: Verify Live Campaigns heading is displayed', async () => {
-            await expect(page.locator('text=My Active Campaigns')).toBeVisible();
+            await expect(page.locator('h2:has-text("My Active Campaigns")')).toBeVisible();
             await expect(page.locator('text=Monitor your currently running promotional batches')).toBeVisible();
         });
 
@@ -274,7 +274,7 @@ test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
 
                 // Verify the progress bar showing sales velocity
                 const progressBar = firstCard.locator('.bg-emerald-500, .bg-gradient-to-r').first();
-                await expect(progressBar).toBeVisible();
+                await expect(progressBar).toHaveCount(1);
 
                 // Verify sold/remaining labels are present
                 await expect(firstCard.locator('text=Sold')).toBeVisible();
@@ -293,7 +293,7 @@ test.describe('Sprint 2: PB10 — B2B Retailer Collaboration Portal', () => {
         });
 
         await test.step('Step 3: Verify Collaboration Portal heading is visible', async () => {
-            await expect(page.locator('text=Collaboration Portal')).toBeVisible({ timeout: 15000 });
+            await expect(page.locator('h1:has-text("Collaboration Portal")')).toBeVisible({ timeout: 15000 });
             await expect(page.locator('text=Monitor live and accepted promotional campaigns')).toBeVisible();
         });
 
@@ -495,7 +495,7 @@ test.describe('Sprint 2: PB10 (Extended) — Live Campaigns & Collaboration Log'
         });
 
         await test.step('Step 3: Verify the Collaboration Portal heading and description are visible', async () => {
-            await expect(page.locator('text=Collaboration Portal')).toBeVisible({ timeout: 15000 });
+            await expect(page.locator('h1:has-text("Collaboration Portal")')).toBeVisible({ timeout: 15000 });
             await expect(page.locator('text=Monitor live and accepted promotional campaigns')).toBeVisible();
         });
 

@@ -190,14 +190,22 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
     // The tab itself must be visible (live-container may be 0-height if empty)
     await expect(page.locator('#tab-live')).toBeVisible({ timeout: 10000 });
 
-    // Either shows "No Live Campaigns" or actual campaign cards with progress bars
-    const hasNoMsg = await page.locator('#no-live-msg').isVisible();
-    if (hasNoMsg) {
+    // Wait for Firebase data to load: either the empty-state OR a live card will appear.
+    // Using auto-waiting locators avoids the race condition of an instant isVisible() check.
+    const noLiveMsg = page.locator('#no-live-msg:visible');
+    const liveCard = page.locator('#live-container .bg-white').first();
+
+    await expect(noLiveMsg.or(liveCard)).toBeVisible({ timeout: 10000 });
+
+    if (await noLiveMsg.isVisible()) {
       await expect(page.locator('text=No Live Campaigns')).toBeVisible();
     } else {
-      // Progress bar exists inside a live card
-      const progressBar = page.locator('.h-full.bg-gradient-to-r').first();
-      await expect(progressBar).toBeVisible();
+      // A live campaign card is visible — verify it contains the velocity structure.
+      // The inner progress bar div may have width:0% (when soldUnits=0), making it
+      // "hidden" per Playwright. Instead, assert the parent progress track exists
+      // and the card contains the "Sales Velocity" label.
+      await expect(liveCard).toContainText('Sales Velocity');
+      await expect(liveCard.locator('.bg-gradient-to-r')).toHaveCount(1);
     }
   });
 
@@ -224,10 +232,10 @@ test.describe('Sprint 2: Inventory Aging & Retailer Collaboration (PB5–PB12)',
       await endBtn.click();
 
       // After ending, a success toast should appear (or the row disappears)
-      // We check either the toast or that the button is no longer there
-      const toastOrEmpty = page.locator(
-        '#toast-container, text=No matching promotions found., text=No active promotions found.'
-      );
+      // We check either the toast or an empty-state message
+      const toastOrEmpty = page.locator('#toast-container')
+        .or(page.locator('text=No matching promotions found.'))
+        .or(page.locator('text=No active promotions found.'));
       await expect(toastOrEmpty.first()).toBeVisible({ timeout: 8000 });
     } else {
       // No campaigns to end — verify the empty state is shown gracefully

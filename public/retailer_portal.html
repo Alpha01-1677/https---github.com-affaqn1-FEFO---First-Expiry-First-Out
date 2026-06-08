@@ -737,8 +737,8 @@
                         <div class="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000" style="width: ${progress}%"></div>
                     </div>
                     <div class="flex justify-between mt-2">
-                        <span class="text-[10px] font-medium text-slate-400">${soldUnits.toLocaleString()} units sold</span>
-                        <span class="text-[10px] font-medium text-slate-400">${promoQty.toLocaleString()} total</span>
+                        <span class="text-[10px] font-medium text-slate-400">${soldUnits.toLocaleString()} Sold</span>
+                        <span class="text-[10px] font-medium text-slate-400">${(promoQty - soldUnits).toLocaleString()} Remaining</span>
                     </div>
                 </div>
             `;

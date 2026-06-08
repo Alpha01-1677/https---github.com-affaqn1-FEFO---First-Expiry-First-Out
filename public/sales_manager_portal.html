@@ -373,7 +373,7 @@
                                     </div>
                                 </div>
                                 <div style="display: flex; gap: 8px;">
-                                    <input type="text" id="promo-search" placeholder="Search product or title..." style="font-size: 11px; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; width: 180px; outline: none; transition: border-color 0.2s;" onkeyup="renderPromotionsTable()" />
+                                    <input type="text" id="promo-search" placeholder="Search product or title..." style="font-size: 11px; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; width: 180px; outline: none; transition: border-color 0.2s;" oninput="renderPromotionsTable()" onkeyup="renderPromotionsTable()" />
                                     <select id="promo-status-filter" style="font-size: 11px; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; outline: none;" onchange="renderPromotionsTable()">
                                         <option value="all">All Status</option>
                                         <option value="active">Active</option>
